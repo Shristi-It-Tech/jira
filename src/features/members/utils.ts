@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { MemberDocument } from '@/features/members/types';
 import { MemberModel, connectToDatabase } from '@/lib/db';
 

@@ -10,9 +10,8 @@ import workspaces from '@/features/workspaces/server/route';
 
 export const runtime = 'nodejs';
 
-const app = new Hono().basePath('/api');
-
-const routes = app
+const app = new Hono()
+  .basePath('/api')
   .route('/auth', auth)
   .route('/members', members)
   .route('/employees', employees)
@@ -20,7 +19,7 @@ const routes = app
   .route('/tasks', tasks)
   .route('/workspaces', workspaces);
 
-export type AppType = typeof routes;
+export type AppType = typeof app;
 
 export const GET = handle(app);
 export const POST = handle(app);

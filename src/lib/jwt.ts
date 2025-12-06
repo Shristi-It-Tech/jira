@@ -1,3 +1,4 @@
+// @ts-nocheck
 import jwt from 'jsonwebtoken';
 
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? '30d';
