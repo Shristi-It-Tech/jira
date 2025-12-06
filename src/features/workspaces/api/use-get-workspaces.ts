@@ -1,9 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
+import type { Models } from 'node-appwrite';
 
+import type { Workspace } from '@/features/workspaces/types';
 import { client } from '@/lib/hono';
 
+type WorkspacesResponse = Models.DocumentList<Workspace>;
+
 export const useGetWorkspaces = () => {
-  const query = useQuery({
+  const query = useQuery<WorkspacesResponse>({
     queryKey: ['workspaces'],
     queryFn: async () => {
       const response = await client.api.workspaces.$get();
@@ -12,7 +16,7 @@ export const useGetWorkspaces = () => {
 
       const { data } = await response.json();
 
-      return data;
+      return data as WorkspacesResponse;
     },
   });
 
