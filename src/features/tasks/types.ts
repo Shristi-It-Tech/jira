@@ -1,7 +1,6 @@
-import { Models } from 'node-appwrite';
-
 import type { Member } from '@/features/members/types';
 import type { Project } from '@/features/projects/types';
+import type { WithDocument } from '@/types/database';
 
 export enum TaskStatus {
   BACKLOG = 'BACKLOG',
@@ -11,7 +10,7 @@ export enum TaskStatus {
   DONE = 'DONE',
 }
 
-export type Task = Models.Document & {
+export type Task = WithDocument<{
   name: string;
   status: TaskStatus;
   assigneeId: string;
@@ -20,7 +19,7 @@ export type Task = Models.Document & {
   position: number;
   dueDate: string;
   description?: string;
-};
+}>;
 
 export type TaskWithRelations = Task & {
   project: Project;

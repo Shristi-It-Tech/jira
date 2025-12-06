@@ -1,8 +1,8 @@
-import { type Models } from 'node-appwrite';
+import type { WithDocument } from '@/types/database';
 
-export type Project = Models.Document & {
+export type Project = WithDocument<{
   name: string;
   imageId?: string;
   imageUrl?: string;
   workspaceId: string;
-};
+}>;

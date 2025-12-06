@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import type { Models } from 'node-appwrite';
 
 import type { Workspace } from '@/features/workspaces/types';
 import { client } from '@/lib/hono';
+import type { DocumentList } from '@/types/database';
 
-type WorkspacesResponse = Models.DocumentList<Workspace>;
+type WorkspacesResponse = DocumentList<Workspace>;
 
 export const useGetWorkspaces = () => {
   const query = useQuery<WorkspacesResponse>({

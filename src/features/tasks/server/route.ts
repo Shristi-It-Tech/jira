@@ -1,412 +1,395 @@
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
-import { ID, Models, Query } from 'node-appwrite';
 import { z } from 'zod';
 
-import { COMMENTS_ID, DATABASE_ID, IMAGES_BUCKET_ID, MEMBERS_ID, PROJECTS_ID, TASKS_ID } from '@/config/db';
+import { IMAGES_BUCKET } from '@/config/storage';
 import { createCommentSchema } from '@/features/comments/schema';
-import type { CommentDocument } from '@/features/comments/types';
-import type { Member } from '@/features/members/types';
+import type { CommentDocument, CommentWithAuthor } from '@/features/comments/types';
+import type { Member, MemberDocument } from '@/features/members/types';
 import { getMember } from '@/features/members/utils';
 import type { Project } from '@/features/projects/types';
 import { createTaskSchema } from '@/features/tasks/schema';
 import { type Task, TaskStatus } from '@/features/tasks/types';
-import { createAdminClient } from '@/lib/appwrite';
+import { CommentModel, MemberModel, ProjectModel, TaskModel, UserModel, connectToDatabase } from '@/lib/db';
+import { toDocumentList } from '@/lib/db/format';
 import { sessionMiddleware } from '@/lib/session-middleware';
+import { storage } from '@/lib/storage';
 
-const app = new Hono()
-  .get(
-    '/',
-    sessionMiddleware,
-    zValidator(
-      'query',
-      z.object({
-        workspaceId: z.string(),
-        projectId: z.string().nullish(),
-        assigneeId: z.string().nullish(),
-        status: z.nativeEnum(TaskStatus).nullish(),
-        search: z.string().nullish(),
-        dueDate: z.string().nullish(),
-      }),
-    ),
-    async (ctx) => {
-      const { users } = await createAdminClient();
-      const databases = ctx.get('databases');
-      const storage = ctx.get('storage');
-      const user = ctx.get('user');
+const buildImageUrl = async (imageId?: string) => {
+  if (!imageId) return undefined;
 
-      const { workspaceId, projectId, assigneeId, status, search, dueDate } = ctx.req.valid('query');
+  const buffer = await storage.getFileView(IMAGES_BUCKET, imageId);
+  return `data:image/png;base64,${buffer.toString('base64')}`;
+};
 
-      const member = await getMember({
-        databases,
-        workspaceId,
-        userId: user.$id,
-      });
+const buildProjectMap = async (projectIds: string[]) => {
+  if (!projectIds.length) return new Map<string, Project>();
 
-      if (!member) {
-        return ctx.json({ error: 'Unauthorized.' }, 401);
-      }
+  const projectDocs = await ProjectModel.find({ _id: { $in: projectIds } }).exec();
 
-      const query = [Query.equal('workspaceId', workspaceId), Query.orderDesc('$createdAt')];
+  const entries = await Promise.all(
+    projectDocs.map(async (doc) => {
+      const project = doc.toObject<Project>();
+      const imageUrl = await buildImageUrl(project.imageId);
 
-      if (projectId) query.push(Query.equal('projectId', projectId));
+      return [project.$id, { ...project, imageUrl }] as const;
+    }),
+  );
 
-      if (status) query.push(Query.equal('status', status));
+  return new Map(entries);
+};
 
-      if (assigneeId) query.push(Query.equal('assigneeId', assigneeId));
+const buildMemberMap = async (memberIds: string[]) => {
+  if (!memberIds.length) return new Map<string, Member>();
 
-      if (dueDate) query.push(Query.equal('dueDate', dueDate));
+  const memberDocs = await MemberModel.find({ _id: { $in: memberIds } }).exec();
 
-      if (search) query.push(Query.search('name', search));
+  const userIds = memberDocs.map((doc) => doc.userId);
+  const userDocs = await UserModel.find({ _id: { $in: userIds } }).exec();
+  const userMap = new Map(userDocs.map((doc) => [doc._id.toString(), doc]));
 
-      const tasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, query);
+  const entries = memberDocs.map((doc) => {
+    const member = doc.toObject<MemberDocument>();
+    const relatedUser = userMap.get(member.userId);
 
-      const projectIds = tasks.documents.map((task) => task.projectId);
-      const assigneeIds = tasks.documents.map((task) => task.assigneeId);
+    return [
+      member.$id,
+      {
+        ...member,
+        name: relatedUser?.name ?? '',
+        email: relatedUser?.email ?? '',
+      },
+    ] as const;
+  });
 
-      const projects = await databases.listDocuments<Project>(
-        DATABASE_ID,
-        PROJECTS_ID,
-        projectIds.length > 0 ? [Query.contains('$id', projectIds)] : [],
-      );
+  return new Map(entries);
+};
 
-      const members = await databases.listDocuments(
-        DATABASE_ID,
-        MEMBERS_ID,
-        assigneeIds.length > 0 ? [Query.contains('$id', assigneeIds)] : [],
-      );
+const app = new Hono();
 
-      const assignees = await Promise.all(
-        members.documents.map(async (member) => {
-          const user = await users.get(member.userId);
+app.use(async (_ctx, next) => {
+  await connectToDatabase();
+  return next();
+});
 
-          return {
-            ...member,
-            name: user.name,
-            email: user.email,
-          };
-        }),
-      );
+app.get(
+  '/',
+  sessionMiddleware,
+  zValidator(
+    'query',
+    z.object({
+      workspaceId: z.string(),
+      projectId: z.string().optional(),
+      assigneeId: z.string().optional(),
+      status: z.nativeEnum(TaskStatus).optional(),
+      search: z.string().optional(),
+      dueDate: z.string().optional(),
+    }),
+  ),
+  async (ctx) => {
+    const user = ctx.get('user');
+    const { workspaceId, projectId, assigneeId, status, search, dueDate } = ctx.req.valid('query');
 
-      const populatedTasks: (Models.Document & Task)[] = await Promise.all(
-        tasks.documents.map(async (task) => {
-          const project = projects.documents.find((project) => project.$id === task.projectId);
-          const assignee = assignees.find((assignee) => assignee.$id === task.assigneeId);
+    const member = await getMember({ workspaceId, userId: user.$id });
 
-          let imageUrl: string | undefined = undefined;
-
-          if (project?.imageId) {
-            const arrayBuffer = await storage.getFileView(IMAGES_BUCKET_ID, project.imageId);
-            imageUrl = `data:image/png;base64,${Buffer.from(arrayBuffer).toString('base64')}`;
-          }
-
-          return {
-            ...task,
-            project: {
-              ...project,
-              imageUrl,
-            },
-            assignee,
-          };
-        }),
-      );
-
-      return ctx.json({
-        data: {
-          ...tasks,
-          documents: populatedTasks,
-        },
-      });
-    },
-  )
-  .get('/:taskId', sessionMiddleware, async (ctx) => {
-    const { taskId } = ctx.req.param();
-    const currentUser = ctx.get('user');
-    const databases = ctx.get('databases');
-
-    const { users } = await createAdminClient();
-
-    const task = await databases.getDocument<Task>(DATABASE_ID, TASKS_ID, taskId);
-
-    const currentMember = await getMember({
-      databases,
-      workspaceId: task.workspaceId,
-      userId: currentUser.$id,
-    });
-
-    if (!currentMember) {
+    if (!member) {
       return ctx.json({ error: 'Unauthorized.' }, 401);
     }
 
-    const project = await databases.getDocument<Project>(DATABASE_ID, PROJECTS_ID, task.projectId);
-
-    const member = await databases.getDocument(DATABASE_ID, MEMBERS_ID, task.assigneeId);
-
-    const user = await users.get(member.userId);
-
-    const assignee = {
-      ...member,
-      name: user.name,
-      email: user.email,
+    const filters: Record<string, unknown> = {
+      workspaceId,
     };
 
-    return ctx.json({
-      data: {
+    if (projectId) filters.projectId = projectId;
+    if (status) filters.status = status;
+    if (assigneeId) filters.assigneeId = assigneeId;
+    if (dueDate) filters.dueDate = dueDate;
+    if (search) filters.name = { $regex: search, $options: 'i' };
+
+    const taskDocs = await TaskModel.find(filters).sort({ createdAt: -1 }).exec();
+
+    const projectIds = Array.from(new Set(taskDocs.map((doc) => doc.projectId)));
+    const assigneeIds = Array.from(new Set(taskDocs.map((doc) => doc.assigneeId)));
+
+    const [projectMap, memberMap] = await Promise.all([buildProjectMap(projectIds), buildMemberMap(assigneeIds)]);
+
+    const tasks = taskDocs.map((doc) => {
+      const task = doc.toObject<Task>();
+      const project = projectMap.get(task.projectId);
+      const assignee = memberMap.get(task.assigneeId);
+
+      return {
         ...task,
         project,
         assignee,
+      };
+    });
+
+    return ctx.json({ data: toDocumentList(tasks) });
+  },
+);
+
+app.get('/:taskId', sessionMiddleware, async (ctx) => {
+  const user = ctx.get('user');
+  const { taskId } = ctx.req.param();
+
+  const taskDoc = await TaskModel.findById(taskId).exec();
+
+  if (!taskDoc) {
+    return ctx.json({ error: 'Task not found.' }, 404);
+  }
+
+  const task = taskDoc.toObject<Task>();
+
+  const currentMember = await getMember({ workspaceId: task.workspaceId, userId: user.$id });
+
+  if (!currentMember) {
+    return ctx.json({ error: 'Unauthorized.' }, 401);
+  }
+
+  const projectDoc = await ProjectModel.findById(task.projectId).exec();
+  const memberDoc = await MemberModel.findById(task.assigneeId).exec();
+
+  const project = projectDoc ? { ...projectDoc.toObject<Project>(), imageUrl: await buildImageUrl(projectDoc.imageId) } : undefined;
+
+  let assignee: Member | undefined = undefined;
+
+  if (memberDoc) {
+    const memberData = memberDoc.toObject<MemberDocument>();
+    const userDoc = await UserModel.findById(memberData.userId).exec();
+
+    assignee = {
+      ...memberData,
+      name: userDoc?.name ?? '',
+      email: userDoc?.email ?? '',
+    };
+  }
+
+  return ctx.json({
+    data: {
+      ...task,
+      project,
+      assignee,
+    },
+  });
+});
+
+app.post('/', sessionMiddleware, zValidator('json', createTaskSchema), async (ctx) => {
+  const user = ctx.get('user');
+  const { name, status, workspaceId, projectId, dueDate, assigneeId } = ctx.req.valid('json');
+
+  const member = await getMember({ workspaceId, userId: user.$id });
+
+  if (!member) {
+    return ctx.json({ error: 'Unauthorized.' }, 401);
+  }
+
+  const highestTask = await TaskModel.findOne({ workspaceId, status }).sort({ position: -1 }).exec();
+  const position = highestTask ? highestTask.position + 1000 : 1000;
+
+  const taskDoc = await TaskModel.create({
+    name,
+    status,
+    workspaceId,
+    projectId,
+    dueDate: dueDate.toISOString(),
+    assigneeId,
+    position,
+  });
+
+  return ctx.json({ data: taskDoc.toObject<Task>() });
+});
+
+app.patch('/:taskId', sessionMiddleware, zValidator('json', createTaskSchema.partial()), async (ctx) => {
+  const user = ctx.get('user');
+  const { taskId } = ctx.req.param();
+  const payload = ctx.req.valid('json');
+
+  const taskDoc = await TaskModel.findById(taskId).exec();
+
+  if (!taskDoc) {
+    return ctx.json({ error: 'Task not found.' }, 404);
+  }
+
+  const member = await getMember({ workspaceId: taskDoc.workspaceId, userId: user.$id });
+
+  if (!member) {
+    return ctx.json({ error: 'Unauthorized.' }, 401);
+  }
+
+  if (payload.name) taskDoc.name = payload.name;
+  if (payload.status) taskDoc.status = payload.status;
+  if (payload.projectId) taskDoc.projectId = payload.projectId;
+  if (payload.assigneeId) taskDoc.assigneeId = payload.assigneeId;
+  if (payload.description !== undefined) taskDoc.description = payload.description;
+  if (payload.dueDate) taskDoc.dueDate = payload.dueDate.toISOString();
+
+  await taskDoc.save();
+
+  return ctx.json({ data: taskDoc.toObject<Task>() });
+});
+
+app.get('/:taskId/comments', sessionMiddleware, async (ctx) => {
+  const user = ctx.get('user');
+  const { taskId } = ctx.req.param();
+
+  const taskDoc = await TaskModel.findById(taskId).exec();
+
+  if (!taskDoc) {
+    return ctx.json({ error: 'Task not found.' }, 404);
+  }
+
+  const member = await getMember({ workspaceId: taskDoc.workspaceId, userId: user.$id });
+
+  if (!member) {
+    return ctx.json({ error: 'Unauthorized.' }, 401);
+  }
+
+  const commentsDocs = await CommentModel.find({ taskId }).sort({ createdAt: 1 }).exec();
+  const memberIds = Array.from(new Set(commentsDocs.map((doc) => doc.memberId)));
+
+  const memberMap = await buildMemberMap(memberIds);
+
+  const comments: CommentWithAuthor[] = commentsDocs.map((doc) => {
+    const comment = doc.toObject<CommentDocument>();
+    const author = memberMap.get(comment.memberId);
+
+    return {
+      ...comment,
+      mentions: comment.mentions ?? [],
+      author,
+    };
+  });
+
+  return ctx.json({ data: toDocumentList(comments) });
+});
+
+app.post('/:taskId/comments', sessionMiddleware, zValidator('json', createCommentSchema), async (ctx) => {
+  const user = ctx.get('user');
+  const { taskId } = ctx.req.param();
+  const { body, parentId, mentions } = ctx.req.valid('json');
+
+  const taskDoc = await TaskModel.findById(taskId).exec();
+
+  if (!taskDoc) {
+    return ctx.json({ error: 'Task not found.' }, 404);
+  }
+
+  const member = await getMember({ workspaceId: taskDoc.workspaceId, userId: user.$id });
+
+  if (!member) {
+    return ctx.json({ error: 'Unauthorized.' }, 401);
+  }
+
+  const commentDoc = await CommentModel.create({
+    workspaceId: taskDoc.workspaceId,
+    taskId,
+    memberId: member.$id,
+    body,
+    parentId,
+    mentions: mentions ?? [],
+  });
+
+  const userDoc = await UserModel.findById(member.userId).exec();
+
+  return ctx.json({
+    data: {
+      ...commentDoc.toObject<CommentDocument>(),
+      mentions: mentions ?? [],
+      author: {
+        ...member,
+        name: userDoc?.name ?? '',
+        email: userDoc?.email ?? '',
       },
-    });
-  })
-  .post('/', sessionMiddleware, zValidator('json', createTaskSchema), async (ctx) => {
+    },
+  });
+});
+
+app.post(
+  '/bulk-update',
+  sessionMiddleware,
+  zValidator(
+    'json',
+    z.object({
+      tasks: z.array(
+        z.object({
+          $id: z.string(),
+          status: z.nativeEnum(TaskStatus),
+          position: z.number().int().positive().min(1000).max(100000),
+        }),
+      ),
+    }),
+  ),
+  async (ctx) => {
     const user = ctx.get('user');
-    const databases = ctx.get('databases');
+    const { tasks } = ctx.req.valid('json');
 
-    const { name, status, workspaceId, projectId, dueDate, assigneeId } = ctx.req.valid('json');
+    const taskDocs = await TaskModel.find({ _id: { $in: tasks.map((task) => task.$id) } }).exec();
 
-    const member = await getMember({
-      databases,
-      workspaceId,
-      userId: user.$id,
-    });
+    if (!taskDocs.length) {
+      return ctx.json({ error: 'Tasks not found.' }, 404);
+    }
+
+    const workspaceIds = Array.from(new Set(taskDocs.map((task) => task.workspaceId)));
+
+    if (workspaceIds.length !== 1) {
+      return ctx.json({ error: 'All tasks must belong to the same workspace.' }, 401);
+    }
+
+    const workspaceId = workspaceIds[0];
+
+    const member = await getMember({ workspaceId, userId: user.$id });
 
     if (!member) {
       return ctx.json({ error: 'Unauthorized.' }, 401);
     }
 
-    const highestPositionTask = await databases.listDocuments(DATABASE_ID, TASKS_ID, [
-      Query.equal('status', status),
-      Query.equal('workspaceId', workspaceId),
-      Query.orderAsc('position'),
-      Query.limit(1),
-    ]);
+    const updatedTasks = await Promise.all(
+      tasks.map(async ({ $id, status, position }) => {
+        const updatedTask = await TaskModel.findByIdAndUpdate(
+          $id,
+          {
+            status,
+            position,
+          },
+          {
+            new: true,
+          },
+        ).exec();
 
-    const newPosition = highestPositionTask.documents.length > 0 ? highestPositionTask.documents[0].position + 1000 : 1000;
-
-    const task = await databases.createDocument<Task>(DATABASE_ID, TASKS_ID, ID.unique(), {
-      name,
-      status,
-      workspaceId,
-      projectId,
-      dueDate: dueDate.toISOString(),
-      assigneeId,
-      position: newPosition,
-    });
-
-    return ctx.json({ data: task });
-  })
-  .patch('/:taskId', sessionMiddleware, zValidator('json', createTaskSchema.partial()), async (ctx) => {
-    const user = ctx.get('user');
-    const databases = ctx.get('databases');
-
-    const { name, status, description, projectId, dueDate, assigneeId } = ctx.req.valid('json');
-    const { taskId } = ctx.req.param();
-
-    const existingTask = await databases.getDocument<Task>(DATABASE_ID, TASKS_ID, taskId);
-
-    const member = await getMember({
-      databases,
-      workspaceId: existingTask.workspaceId,
-      userId: user.$id,
-    });
-
-    if (!member) {
-      return ctx.json({ error: 'Unauthorized.' }, 401);
-    }
-
-    const task = await databases.updateDocument(DATABASE_ID, TASKS_ID, taskId, {
-      name,
-      status,
-      projectId,
-      dueDate: dueDate?.toISOString() ?? existingTask.dueDate,
-      assigneeId,
-      description,
-    });
-
-    return ctx.json({ data: task });
-  })
-  .get('/:taskId/comments', sessionMiddleware, async (ctx) => {
-    const { taskId } = ctx.req.param();
-    const databases = ctx.get('databases');
-    const user = ctx.get('user');
-    const { users } = await createAdminClient();
-
-    const task = await databases.getDocument<Task>(DATABASE_ID, TASKS_ID, taskId);
-
-    const member = await getMember({
-      databases,
-      workspaceId: task.workspaceId,
-      userId: user.$id,
-    });
-
-    if (!member) {
-      return ctx.json({ error: 'Unauthorized.' }, 401);
-    }
-
-    const comments = await databases.listDocuments<CommentDocument>(DATABASE_ID, COMMENTS_ID, [
-      Query.equal('taskId', taskId),
-      Query.orderAsc('$createdAt'),
-    ]);
-
-    const memberIds = Array.from(new Set(comments.documents.map((comment) => comment.memberId)));
-
-    let relatedMembers: Member[] = [];
-
-    if (memberIds.length) {
-      const membersList = await databases.listDocuments<Member>(DATABASE_ID, MEMBERS_ID, [Query.contains('$id', memberIds)]);
-      relatedMembers = membersList.documents;
-    }
-
-    const populatedComments = await Promise.all(
-      comments.documents.map(async (comment) => {
-        const memberDoc = relatedMembers.find((doc) => doc.$id === comment.memberId);
-
-        let author: Member | undefined = undefined;
-
-        if (memberDoc) {
-          const memberUser = await users.get(memberDoc.userId);
-          author = {
-            ...memberDoc,
-            name: memberUser.name,
-            email: memberUser.email,
-          };
-        }
-
-        return {
-          ...comment,
-          mentions: comment.mentions ?? [],
-          author,
-        };
+        return updatedTask ? updatedTask.toObject<Task>() : null;
       }),
     );
 
     return ctx.json({
       data: {
-        ...comments,
-        documents: populatedComments,
-      },
-    });
-  })
-  .post('/:taskId/comments', sessionMiddleware, zValidator('json', createCommentSchema), async (ctx) => {
-    const { taskId } = ctx.req.param();
-    const databases = ctx.get('databases');
-    const user = ctx.get('user');
-    const { users } = await createAdminClient();
-
-    const { body, parentId, mentions } = ctx.req.valid('json');
-
-    const task = await databases.getDocument<Task>(DATABASE_ID, TASKS_ID, taskId);
-
-    const member = await getMember({
-      databases,
-      workspaceId: task.workspaceId,
-      userId: user.$id,
-    });
-
-    if (!member) {
-      return ctx.json({ error: 'Unauthorized.' }, 401);
-    }
-
-    const comment = await databases.createDocument<CommentDocument>(DATABASE_ID, COMMENTS_ID, ID.unique(), {
-      workspaceId: task.workspaceId,
-      taskId,
-      memberId: member.$id,
-      body,
-      parentId,
-      mentions: mentions ?? [],
-    });
-
-    const memberUser = await users.get(member.userId);
-
-    return ctx.json({
-      data: {
-        ...comment,
-        mentions: mentions ?? [],
-        author: {
-          ...member,
-          name: memberUser.name,
-          email: memberUser.email,
-        },
-      },
-    });
-  })
-  .post(
-    '/bulk-update',
-    sessionMiddleware,
-    zValidator(
-      'json',
-      z.object({
-        tasks: z.array(
-          z.object({
-            $id: z.string(),
-            status: z.nativeEnum(TaskStatus),
-            position: z.number().int().positive().min(1000).max(1_00_000),
-          }),
-        ),
-      }),
-    ),
-    async (ctx) => {
-      const databases = ctx.get('databases');
-      const user = ctx.get('user');
-      const { tasks } = ctx.req.valid('json');
-
-      const tasksToUpdate = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
-        Query.contains(
-          '$id',
-          tasks.map((task: { $id: any }) => task.$id),
-        ),
-      ]);
-
-      const workspaceIds = new Set(tasksToUpdate.documents.map((task) => task.workspaceId));
-
-      if (workspaceIds.size !== 1) {
-        return ctx.json({ error: 'All tasks must belong to the same workspace.' }, 401);
-      }
-
-      const workspaceId = workspaceIds.values().next().value!;
-
-      const member = await getMember({
-        databases,
+        updatedTasks: updatedTasks.filter(Boolean),
         workspaceId,
-        userId: user.$id,
-      });
-
-      if (!member) {
-        return ctx.json({ error: 'Unauthorized.' }, 401);
-      }
-
-      const updatedTasks = await Promise.all(
-        tasks.map(async (task: { $id: any; status: any; position: any }) => {
-          const { $id, status, position } = task;
-
-          return databases.updateDocument<Task>(DATABASE_ID, TASKS_ID, $id, { status, position });
-        }),
-      );
-
-      return ctx.json({ data: { updatedTasks, workspaceId } });
-    },
-  )
-  .delete('/:taskId', sessionMiddleware, async (ctx) => {
-    const user = ctx.get('user');
-    const databases = ctx.get('databases');
-
-    const { taskId } = ctx.req.param();
-
-    const task = await databases.getDocument<Task>(DATABASE_ID, TASKS_ID, taskId);
-
-    const member = await getMember({
-      databases,
-      workspaceId: task.workspaceId,
-      userId: user.$id,
+      },
     });
+  },
+);
 
-    if (!member) {
-      return ctx.json({ error: 'Unauthorized.' }, 401);
-    }
+app.delete('/:taskId', sessionMiddleware, async (ctx) => {
+  const user = ctx.get('user');
+  const { taskId } = ctx.req.param();
 
-    await databases.deleteDocument(DATABASE_ID, TASKS_ID, taskId);
+  const taskDoc = await TaskModel.findById(taskId).exec();
 
-    return ctx.json({ data: task });
-  });
+  if (!taskDoc) {
+    return ctx.json({ error: 'Task not found.' }, 404);
+  }
+
+  const member = await getMember({ workspaceId: taskDoc.workspaceId, userId: user.$id });
+
+  if (!member) {
+    return ctx.json({ error: 'Unauthorized.' }, 401);
+  }
+
+  await TaskModel.findByIdAndDelete(taskId);
+  await CommentModel.deleteMany({ taskId });
+
+  return ctx.json({ data: { $id: taskId, workspaceId: taskDoc.workspaceId } });
+});
 
 export default app;

@@ -1,18 +1,18 @@
-import { type Databases, Query } from 'node-appwrite';
-
-import { DATABASE_ID, MEMBERS_ID } from '@/config/db';
+import type { MemberDocument } from '@/features/members/types';
+import { MemberModel, connectToDatabase } from '@/lib/db';
 
 interface GetMemberProps {
-  databases: Databases;
   workspaceId: string;
   userId: string;
 }
 
-export const getMember = async ({ databases, workspaceId, userId }: GetMemberProps) => {
-  const members = await databases.listDocuments(DATABASE_ID, MEMBERS_ID, [
-    Query.equal('workspaceId', workspaceId),
-    Query.equal('userId', userId),
-  ]);
+export const getMember = async ({ workspaceId, userId }: GetMemberProps) => {
+  await connectToDatabase();
 
-  return members.documents[0];
+  const member = await MemberModel.findOne({
+    workspaceId,
+    userId,
+  }).exec();
+
+  return member ? member.toObject<MemberDocument>() : null;
 };

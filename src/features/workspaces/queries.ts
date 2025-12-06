@@ -1,46 +1,31 @@
 'use server';
 
-import { type Models, Query } from 'node-appwrite';
+import { cookies } from 'next/headers';
 
-import { DATABASE_ID, IMAGES_BUCKET_ID, MEMBERS_ID, WORKSPACES_ID } from '@/config/db';
-import { createSessionClient } from '@/lib/appwrite';
+import type { Workspace } from '@/features/workspaces/types';
+import type { DocumentList } from '@/types/database';
 
-export const getWorkspaces = async () => {
+export const getWorkspaces = async (): Promise<DocumentList<Workspace>> => {
   try {
-    const { account, databases, storage } = await createSessionClient();
+    const cookieHeader = cookies()
+      .getAll()
+      .map((cookie) => `${cookie.name}=${cookie.value}`)
+      .join('; ');
 
-    const user = await account.get();
-    const members = await databases.listDocuments(DATABASE_ID, MEMBERS_ID, [Query.equal('userId', user.$id)]);
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_BASE_URL}/api/workspaces`, {
+      method: 'GET',
+      headers: {
+        cookie: cookieHeader,
+      },
+      cache: 'no-store',
+    });
 
-    if (members.total === 0) return { documents: [], total: 0 };
+    if (!response.ok) {
+      return { documents: [], total: 0 };
+    }
 
-    const workspaceIds = members.documents.map((member) => member.workspaceId);
-
-    const workspaces = await databases.listDocuments(DATABASE_ID, WORKSPACES_ID, [
-      Query.contains('$id', workspaceIds),
-      Query.orderDesc('$createdAt'),
-    ]);
-
-    const workspacesWithImages: Models.Document[] = await Promise.all(
-      workspaces.documents.map(async (workspace) => {
-        let imageUrl: string | undefined = undefined;
-
-        if (workspace.imageId) {
-          const arrayBuffer = await storage.getFileView(IMAGES_BUCKET_ID, workspace.imageId);
-          imageUrl = `data:image/png;base64,${Buffer.from(arrayBuffer).toString('base64')}`;
-        }
-
-        return {
-          ...workspace,
-          imageUrl,
-        };
-      }),
-    );
-
-    return {
-      documents: workspacesWithImages,
-      total: workspaces.total,
-    };
+    const { data } = await response.json();
+    return data as DocumentList<Workspace>;
   } catch {
     return { documents: [], total: 0 };
   }

@@ -1,51 +1,48 @@
 import { getCookie } from 'hono/cookie';
 import { createMiddleware } from 'hono/factory';
-import {
-  Account,
-  type Account as AccountType,
-  Client,
-  Databases,
-  type Databases as DatabasesType,
-  type Models,
-  Storage,
-  Storage as StorageType,
-  type Users as UsersType,
-} from 'node-appwrite';
-import 'server-only';
 
 import { AUTH_COOKIE } from '@/features/auth/constants';
+import { UserModel, connectToDatabase } from '@/lib/db';
+import { verifyToken } from '@/lib/jwt';
+
+type SessionUser = {
+  $id: string;
+  name: string;
+  email: string;
+};
 
 type AdditionalContext = {
   Variables: {
-    account: AccountType;
-    databases: DatabasesType;
-    storage: StorageType;
-    users: UsersType;
-    user: Models.User<Models.Preferences>;
+    user: SessionUser;
   };
 };
 
 export const sessionMiddleware = createMiddleware<AdditionalContext>(async (ctx, next) => {
-  const client = new Client().setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!).setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!);
+  const token = getCookie(ctx, AUTH_COOKIE);
 
-  const session = getCookie(ctx, AUTH_COOKIE);
-
-  if (!session) {
+  if (!token) {
     return ctx.json({ error: 'Unauthorized.' }, 401);
   }
 
-  client.setSession(session);
+  try {
+    const payload = verifyToken(token);
+    await connectToDatabase();
 
-  const account = new Account(client);
-  const databases = new Databases(client);
-  const storage = new Storage(client);
+    const user = await UserModel.findById(payload.userId).lean();
 
-  const user = await account.get();
+    if (!user) {
+      return ctx.json({ error: 'Unauthorized.' }, 401);
+    }
 
-  ctx.set('account', account);
-  ctx.set('databases', databases);
-  ctx.set('storage', storage);
-  ctx.set('user', user);
+    ctx.set('user', {
+      $id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+    });
 
-  await next();
+    return await next();
+  } catch (error) {
+    console.error(error);
+    return ctx.json({ error: 'Unauthorized.' }, 401);
+  }
 });

@@ -2,13 +2,12 @@ import type { Metadata } from 'next';
 
 export const siteConfig: Metadata = {
   title: 'Jira Clone',
-  description: 'Full-stack Jira Clone using Next.js 14 and Appwrite.',
+  description: 'Full-stack Jira Clone using Next.js 14 with MongoDB + JWT auth.',
   keywords: [
     'reactjs',
     'nextjs',
-    'appwrite',
-    'appwrite-io',
-    'next-auth',
+    'mongodb',
+    'jwt',
     'react-big-calendar',
     'lucide-icons',
     'react-icons',
@@ -41,7 +40,6 @@ export const siteConfig: Metadata = {
     'projects-management',
     'workspaces-management',
     'ui/ux',
-    'appwrite-db',
     'jira-clone',
 
     'date-fns',

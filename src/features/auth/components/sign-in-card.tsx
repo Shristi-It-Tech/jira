@@ -2,12 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
-import { OAuthProvider } from 'node-appwrite';
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { FaGithub } from 'react-icons/fa';
-import { FcGoogle } from 'react-icons/fc';
-import { toast } from 'sonner';
 import { z } from 'zod';
 
 import { DottedSeparator } from '@/components/dotted-separator';
@@ -17,10 +12,8 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from '@/component
 import { Input } from '@/components/ui/input';
 import { useLogin } from '@/features/auth/api/use-login';
 import { signInFormSchema } from '@/features/auth/schema';
-import { onOAuth } from '@/lib/oauth';
 
 export const SignInCard = () => {
-  const [isRedirecting, setIsRedirecting] = useState(false);
   const { mutate: login, isPending: isLoggingIn } = useLogin();
 
   const signInForm = useForm<z.infer<typeof signInFormSchema>>({
@@ -47,18 +40,7 @@ export const SignInCard = () => {
     );
   };
 
-  const handleOAuth = (provider: OAuthProvider.Github | OAuthProvider.Google) => {
-    setIsRedirecting(true);
-
-    onOAuth(provider)
-      .catch((error) => {
-        console.error(error);
-        toast.error('Something went wrong.');
-      })
-      .finally(() => setIsRedirecting(false));
-  };
-
-  const isPending = isLoggingIn || isRedirecting;
+  const isPending = isLoggingIn;
 
   return (
     <Card className="size-full border-none shadow-none md:w-[487px]">
@@ -109,24 +91,6 @@ export const SignInCard = () => {
           </form>
         </Form>
       </CardContent>
-
-      <div className="px-7">
-        <DottedSeparator />
-      </div>
-
-      <CardContent className="flex flex-col gap-y-4 p-7">
-        <Button onClick={() => handleOAuth(OAuthProvider.Google)} disabled={isPending} variant="secondary" size="lg" className="w-full">
-          <FcGoogle className="mr-2 size-5" /> Continue with Google
-        </Button>
-
-        <Button onClick={() => handleOAuth(OAuthProvider.Github)} disabled={isPending} variant="secondary" size="lg" className="w-full">
-          <FaGithub className="mr-2 size-5" /> Continue with GitHub
-        </Button>
-      </CardContent>
-
-      <div className="px-7">
-        <DottedSeparator />
-      </div>
 
       <CardContent className="flex items-center justify-center p-7">
         <p>

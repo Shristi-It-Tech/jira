@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import type { Models } from 'node-appwrite';
 
 import type { CommentWithAuthor } from '@/features/comments/types';
 import { client } from '@/lib/hono';
+import type { DocumentList } from '@/types/database';
 
 interface UseGetCommentsProps {
   taskId: string;
 }
 
-type CommentsResponse = Models.DocumentList<CommentWithAuthor>;
+type CommentsResponse = DocumentList<CommentWithAuthor>;
 
 export const useGetComments = ({ taskId }: UseGetCommentsProps) => {
   const query = useQuery<CommentsResponse>({
