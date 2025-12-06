@@ -11,12 +11,8 @@
     "format": "prettier --check . --config .prettierrc.mjs",
     "format:fix": "prettier --write . --config .prettierrc.mjs"
   },
-  "author": {
-    "name": "Sanidhya Kumar Verma",
-    "email": "sanidhya.verma12345@gmail.com",
-    "url": "https://github.com/sanidhyy"
-  },
-  "description": "Full-stack Jira Clone using Next.js 14 and Appwrite.",
+
+  "description": "Full-stack Jira using Next.js 14 and Appwrite.",
   "keywords": [
     "reactjs",
     "nextjs",
@@ -60,26 +56,7 @@
     "clsx",
     "lucide-react"
   ],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/sanidhyy/jira-clone.git"
-  },
-  "homepage": "https://github.com/sanidhyy/jira-clone#readme",
-  "bugs": {
-    "url": "https://github.com/sanidhyy/jira-clone/issues",
-    "email": "sanidhya.verma12345@gmail.com"
-  },
-  "funding": [
-    {
-      "type": "patreon",
-      "url": "https://www.patreon.com/sanidhy"
-    },
-    {
-      "type": "Buy me a coffee",
-      "url": "https://www.buymeacoffee.com/sanidhy"
-    }
-  ],
+
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
     "@hono/zod-validator": "^0.7.0",
@@ -100,7 +77,7 @@
     "@tanstack/react-table": "^8.20.5",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
-    "date-fns": "^4.1.0",
+    "date-fns": "^3.6.0",
     "hono": "^4.6.7",
     "lucide-react": "^0.555.0",
     "next": "14.2.15",
