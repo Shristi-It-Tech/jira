@@ -3,7 +3,10 @@ import { Hono } from 'hono';
 import { ID, Models, Query } from 'node-appwrite';
 import { z } from 'zod';
 
-import { DATABASE_ID, IMAGES_BUCKET_ID, MEMBERS_ID, PROJECTS_ID, TASKS_ID } from '@/config/db';
+import { COMMENTS_ID, DATABASE_ID, IMAGES_BUCKET_ID, MEMBERS_ID, PROJECTS_ID, TASKS_ID } from '@/config/db';
+import { createCommentSchema } from '@/features/comments/schema';
+import type { CommentDocument } from '@/features/comments/types';
+import type { Member } from '@/features/members/types';
 import { getMember } from '@/features/members/utils';
 import type { Project } from '@/features/projects/types';
 import { createTaskSchema } from '@/features/tasks/schema';
@@ -221,6 +224,111 @@ const app = new Hono()
     });
 
     return ctx.json({ data: task });
+  })
+  .get('/:taskId/comments', sessionMiddleware, async (ctx) => {
+    const { taskId } = ctx.req.param();
+    const databases = ctx.get('databases');
+    const user = ctx.get('user');
+    const { users } = await createAdminClient();
+
+    const task = await databases.getDocument<Task>(DATABASE_ID, TASKS_ID, taskId);
+
+    const member = await getMember({
+      databases,
+      workspaceId: task.workspaceId,
+      userId: user.$id,
+    });
+
+    if (!member) {
+      return ctx.json({ error: 'Unauthorized.' }, 401);
+    }
+
+    const comments = await databases.listDocuments<CommentDocument>(DATABASE_ID, COMMENTS_ID, [
+      Query.equal('taskId', taskId),
+      Query.orderAsc('$createdAt'),
+    ]);
+
+    const memberIds = Array.from(new Set(comments.documents.map((comment) => comment.memberId)));
+
+    let relatedMembers: Member[] = [];
+
+    if (memberIds.length) {
+      const membersList = await databases.listDocuments<Member>(DATABASE_ID, MEMBERS_ID, [Query.contains('$id', memberIds)]);
+      relatedMembers = membersList.documents;
+    }
+
+    const populatedComments = await Promise.all(
+      comments.documents.map(async (comment) => {
+        const memberDoc = relatedMembers.find((doc) => doc.$id === comment.memberId);
+
+        let author: Member | undefined = undefined;
+
+        if (memberDoc) {
+          const memberUser = await users.get(memberDoc.userId);
+          author = {
+            ...memberDoc,
+            name: memberUser.name,
+            email: memberUser.email,
+          };
+        }
+
+        return {
+          ...comment,
+          mentions: comment.mentions ?? [],
+          author,
+        };
+      }),
+    );
+
+    return ctx.json({
+      data: {
+        ...comments,
+        documents: populatedComments,
+      },
+    });
+  })
+  .post('/:taskId/comments', sessionMiddleware, zValidator('json', createCommentSchema), async (ctx) => {
+    const { taskId } = ctx.req.param();
+    const databases = ctx.get('databases');
+    const user = ctx.get('user');
+    const { users } = await createAdminClient();
+
+    const { body, parentId, mentions } = ctx.req.valid('json');
+
+    const task = await databases.getDocument<Task>(DATABASE_ID, TASKS_ID, taskId);
+
+    const member = await getMember({
+      databases,
+      workspaceId: task.workspaceId,
+      userId: user.$id,
+    });
+
+    if (!member) {
+      return ctx.json({ error: 'Unauthorized.' }, 401);
+    }
+
+    const comment = await databases.createDocument<CommentDocument>(DATABASE_ID, COMMENTS_ID, ID.unique(), {
+      workspaceId: task.workspaceId,
+      taskId,
+      memberId: member.$id,
+      body,
+      parentId,
+      mentions: mentions ?? [],
+    });
+
+    const memberUser = await users.get(member.userId);
+
+    return ctx.json({
+      data: {
+        ...comment,
+        mentions: mentions ?? [],
+        author: {
+          ...member,
+          name: memberUser.name,
+          email: memberUser.email,
+        },
+      },
+    });
   })
   .post(
     '/bulk-update',

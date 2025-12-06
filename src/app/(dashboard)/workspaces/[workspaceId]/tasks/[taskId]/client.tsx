@@ -3,6 +3,7 @@
 import { DottedSeparator } from '@/components/dotted-separator';
 import { PageError } from '@/components/page-error';
 import { PageLoader } from '@/components/page-loader';
+import { TaskComments } from '@/features/comments/components/task-comments';
 import { useGetTask } from '@/features/tasks/api/use-get-task';
 import { TaskBreadcrumbs } from '@/features/tasks/components/task-breadcrumbs';
 import { TaskDescription } from '@/features/tasks/components/task-description';
@@ -27,6 +28,10 @@ export const TaskIdClient = () => {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <TaskOverview task={task} />
         <TaskDescription task={task} />
+      </div>
+
+      <div className="mt-6">
+        <TaskComments taskId={task.$id} workspaceId={task.workspaceId} />
       </div>
     </div>
   );
