@@ -7,13 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
-import type { Task } from '@/features/tasks/types';
+import type { TaskWithRelations } from '@/features/tasks/types';
 import { snakeCaseToTitleCase } from '@/lib/utils';
 
 import { TaskActions } from './task-actions';
 import { TaskDate } from './task-date';
 
-export const columns: ColumnDef<Task>[] = [
+export const columns: ColumnDef<TaskWithRelations>[] = [
   {
     accessorKey: 'name',
     header: ({ column }) => {

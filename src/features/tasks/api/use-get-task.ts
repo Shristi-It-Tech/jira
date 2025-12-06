@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
+import type { TaskWithRelations } from '@/features/tasks/types';
 import { client } from '@/lib/hono';
 
 interface useGetTaskProps {
@@ -7,7 +8,7 @@ interface useGetTaskProps {
 }
 
 export const useGetTask = ({ taskId }: useGetTaskProps) => {
-  const query = useQuery({
+  const query = useQuery<TaskWithRelations>({
     queryKey: ['task', taskId],
     queryFn: async () => {
       const response = await client.api.tasks[':taskId'].$get({
@@ -20,7 +21,7 @@ export const useGetTask = ({ taskId }: useGetTaskProps) => {
 
       const { data } = await response.json();
 
-      return data;
+      return data as TaskWithRelations;
     },
   });
 
