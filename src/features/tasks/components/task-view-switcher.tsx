@@ -4,7 +4,7 @@ import type { SortingState } from '@tanstack/react-table';
 import { Loader2, PlusIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useQueryState } from 'nuqs';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { DottedSeparator } from '@/components/dotted-separator';
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,9 @@ interface TaskViewSwitcherProps {
   initialAssigneeId?: string | null;
   defaultSorting?: SortingState;
   taskSource?: 'all' | 'mine';
+  lockedStatus?: TaskStatus;
+  resetFiltersOnMount?: boolean;
+  lockedSprintId?: string;
 }
 
 export const TaskViewSwitcher = ({
@@ -43,6 +46,9 @@ export const TaskViewSwitcher = ({
   initialAssigneeId,
   defaultSorting,
   taskSource,
+  lockedStatus,
+  resetFiltersOnMount,
+  lockedSprintId,
 }: TaskViewSwitcherProps) => {
   const [view, setView] = useQueryState('task-view', {
     defaultValue: 'table',
@@ -56,14 +62,18 @@ export const TaskViewSwitcher = ({
   const router = useRouter();
   const effectiveAssigneeId = assigneeId ?? initialAssigneeId ?? undefined;
   const tableColumns = useMemo(() => getColumns({ includeProjectColumn: !projectId }), [projectId]);
+  const hasResetFilters = useRef(false);
+
+  const effectiveStatus = lockedStatus ?? status;
 
   const { data: tasks, isLoading: isLoadingTasks } = useGetTasks({
     workspaceId,
-    status,
+    status: effectiveStatus,
     assigneeId: effectiveAssigneeId,
     projectId: projectId ?? filteredProjectId,
     search,
     type,
+    sprintId: lockedSprintId ?? undefined,
   });
 
   const { mutate: bulkUpdateTasks } = useBulkUpdateTasks();
@@ -92,6 +102,24 @@ export const TaskViewSwitcher = ({
     if (!initialAssigneeId || assigneeId) return;
     setFilters({ assigneeId: initialAssigneeId });
   }, [initialAssigneeId, assigneeId, setFilters]);
+
+  useEffect(() => {
+    if (!resetFiltersOnMount || hasResetFilters.current) return;
+    hasResetFilters.current = true;
+    setFilters({
+      projectId: projectId ?? null,
+      assigneeId: initialAssigneeId ?? null,
+      status: lockedStatus ?? null,
+      type: null,
+      search: null,
+    });
+  }, [resetFiltersOnMount, setFilters, projectId, initialAssigneeId, lockedStatus]);
+
+  useEffect(() => {
+    if (!lockedStatus) return;
+    if (status === lockedStatus) return;
+    setFilters({ status: lockedStatus });
+  }, [lockedStatus, status, setFilters]);
 
   const onKanbanChange = useCallback(
     (tasks: { $id: string; status: TaskStatus; position: number }[]) => {
@@ -151,7 +179,11 @@ export const TaskViewSwitcher = ({
         <DottedSeparator className="my-4" />
 
         <div className="flex flex-col justify-between gap-2 xl:flex-row xl:items-center">
-          <DataFilters hideProjectFilter={hideProjectFilter} hideAssigneeFilter={taskSource === 'mine'} />
+          <DataFilters
+            hideProjectFilter={hideProjectFilter}
+            hideAssigneeFilter={taskSource === 'mine'}
+            hideStatusFilter={Boolean(lockedStatus)}
+          />
 
           <DataSearch />
         </div>

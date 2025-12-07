@@ -5,6 +5,7 @@ import { DottedSeparator } from '@/components/dotted-separator';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
+import { BACKLOG_SPRINT_LABEL } from '@/features/sprints/constants';
 import { useEditTaskModal } from '@/features/tasks/hooks/use-edit-task-modal';
 import { TASK_TYPE_LABELS, TaskType, type TaskWithRelations } from '@/features/tasks/types';
 import { snakeCaseToTitleCase } from '@/lib/utils';
@@ -42,6 +43,14 @@ export const TaskOverview = ({ task }: TaskOverviewProps) => {
 
           <OverviewProperty label="Type">
             <p className="text-sm font-medium">{TASK_TYPE_LABELS[task.type ?? TaskType.TASK]}</p>
+          </OverviewProperty>
+
+          <OverviewProperty label="Sprint">
+            {task.sprint ? (
+              <p className="text-sm font-medium">{task.sprint.name}</p>
+            ) : (
+              <p className="text-sm font-medium text-muted-foreground">{BACKLOG_SPRINT_LABEL}</p>
+            )}
           </OverviewProperty>
 
           <OverviewProperty label="Created">

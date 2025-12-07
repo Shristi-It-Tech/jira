@@ -5,6 +5,7 @@ import auth from '@/features/auth/server/route';
 import employees from '@/features/employees/server/route';
 import members from '@/features/members/server/route';
 import projects from '@/features/projects/server/route';
+import sprints from '@/features/sprints/server/route';
 import tasks from '@/features/tasks/server/route';
 import workspaces from '@/features/workspaces/server/route';
 
@@ -16,6 +17,7 @@ const app = new Hono()
   .route('/members', members)
   .route('/employees', employees)
   .route('/projects', projects)
+  .route('/sprints', sprints)
   .route('/tasks', tasks)
   .route('/workspaces', workspaces);
 

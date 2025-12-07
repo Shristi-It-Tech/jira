@@ -10,9 +10,20 @@ import type { CommentDocument, CommentWithAuthor } from '@/features/comments/typ
 import { type Member, type MemberDocument, MemberRole } from '@/features/members/types';
 import { getMember } from '@/features/members/utils';
 import type { Project } from '@/features/projects/types';
+import { BACKLOG_SPRINT_ID } from '@/features/sprints/constants';
+import type { Sprint } from '@/features/sprints/types';
 import { createTaskAttachmentSchema, createTaskSchema } from '@/features/tasks/schema';
 import { type Task, TaskStatus, TaskType } from '@/features/tasks/types';
-import { CommentModel, MemberModel, ProjectModel, TaskAttachmentModel, TaskModel, UserModel, connectToDatabase } from '@/lib/db';
+import {
+  CommentModel,
+  MemberModel,
+  ProjectModel,
+  SprintModel,
+  TaskAttachmentModel,
+  TaskModel,
+  UserModel,
+  connectToDatabase,
+} from '@/lib/db';
 import { toDocumentList } from '@/lib/db/format';
 import { sessionMiddleware } from '@/lib/session-middleware';
 import { storage } from '@/lib/storage';
@@ -67,6 +78,18 @@ const buildMemberMap = async (memberIds: string[]) => {
   return new Map(entries);
 };
 
+const buildSprintMap = async (sprintIds: string[]) => {
+  if (!sprintIds.length) return new Map<string, Sprint>();
+
+  const sprintDocs = await SprintModel.find({ _id: { $in: sprintIds } }).exec();
+  const entries = sprintDocs.map((doc) => {
+    const sprint = doc.toObject<Sprint>();
+    return [sprint.$id, sprint] as const;
+  });
+
+  return new Map(entries);
+};
+
 const app = new Hono()
   .use(async (_ctx, next) => {
     await connectToDatabase();
@@ -84,12 +107,13 @@ const app = new Hono()
         status: z.nativeEnum(TaskStatus).optional(),
         search: z.string().optional(),
         dueDate: z.string().optional(),
+        sprintId: z.string().optional(),
         type: z.nativeEnum(TaskType).optional(),
       }),
     ),
     async (ctx) => {
       const user = ctx.get('user');
-      const { workspaceId, projectId, assigneeId, status, search, dueDate, type } = ctx.req.valid('query');
+      const { workspaceId, projectId, assigneeId, status, search, dueDate, sprintId, type } = ctx.req.valid('query');
 
       const member = await getMember({ workspaceId, userId: user.$id });
 
@@ -105,6 +129,7 @@ const app = new Hono()
       if (status) filters.status = status;
       if (assigneeId) filters.assigneeId = assigneeId;
       if (dueDate) filters.dueDate = dueDate;
+      if (sprintId) filters.sprintId = sprintId;
       if (type) filters.type = type;
       if (search) filters.name = { $regex: search, $options: 'i' };
 
@@ -112,18 +137,27 @@ const app = new Hono()
 
       const projectIds = Array.from(new Set(taskDocs.map((doc) => doc.projectId)));
       const assigneeIds = Array.from(new Set(taskDocs.map((doc) => doc.assigneeId)));
+      const sprintIds = Array.from(
+        new Set(taskDocs.map((doc) => doc.sprintId).filter((id): id is string => Boolean(id) && id !== BACKLOG_SPRINT_ID)),
+      );
 
-      const [projectMap, memberMap] = await Promise.all([buildProjectMap(projectIds), buildMemberMap(assigneeIds)]);
+      const [projectMap, memberMap, sprintMap] = await Promise.all([
+        buildProjectMap(projectIds),
+        buildMemberMap(assigneeIds),
+        buildSprintMap(sprintIds),
+      ]);
 
       const tasks = taskDocs.map((doc) => {
         const task = doc.toObject<Task>();
         const project = projectMap.get(task.projectId);
         const assignee = memberMap.get(task.assigneeId);
+        const sprint = task.sprintId !== BACKLOG_SPRINT_ID ? sprintMap.get(task.sprintId) : undefined;
 
         return {
           ...task,
           project,
           assignee,
+          sprint,
         };
       });
 
@@ -150,6 +184,7 @@ const app = new Hono()
 
     const projectDoc = await ProjectModel.findById(task.projectId).exec();
     const memberDoc = await MemberModel.findById(task.assigneeId).exec();
+    const sprintDoc = task.sprintId !== BACKLOG_SPRINT_ID ? await SprintModel.findById(task.sprintId).exec() : null;
 
     const project = projectDoc ? { ...projectDoc.toObject<Project>(), imageUrl: await buildImageUrl(projectDoc.imageId) } : undefined;
 
@@ -166,17 +201,20 @@ const app = new Hono()
       };
     }
 
+    const sprint = sprintDoc ? sprintDoc.toObject<Sprint>() : undefined;
+
     return ctx.json({
       data: {
         ...task,
         project,
         assignee,
+        sprint,
       },
     });
   })
   .post('/', sessionMiddleware, zValidator('json', createTaskSchema), async (ctx) => {
     const user = ctx.get('user');
-    const { name, status, workspaceId, projectId, dueDate, assigneeId, type } = ctx.req.valid('json');
+    const { name, status, workspaceId, projectId, dueDate, assigneeId, type, sprintId } = ctx.req.valid('json');
 
     const member = await getMember({ workspaceId, userId: user.$id });
 
@@ -193,6 +231,7 @@ const app = new Hono()
       workspaceId,
       projectId,
       dueDate: dueDate.toISOString(),
+      sprintId,
       type,
       assigneeId,
       position,
@@ -223,6 +262,7 @@ const app = new Hono()
     if (payload.assigneeId) taskDoc.assigneeId = payload.assigneeId;
     if (payload.type) taskDoc.type = payload.type;
     if (payload.description !== undefined) taskDoc.description = payload.description;
+    if (payload.sprintId !== undefined) taskDoc.sprintId = payload.sprintId;
     if (payload.dueDate) taskDoc.dueDate = payload.dueDate.toISOString();
 
     await taskDoc.save();

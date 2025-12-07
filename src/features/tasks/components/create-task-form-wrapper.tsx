@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useGetMembers } from '@/features/members/api/use-get-members';
 import { useGetProjects } from '@/features/projects/api/use-get-projects';
+import { useGetSprints } from '@/features/sprints/api/use-get-sprints';
 import type { TaskStatus } from '@/features/tasks/types';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 
@@ -18,6 +19,7 @@ export const CreateTaskFormWrapper = ({ initialStatus, onCancel }: CreateTaskFor
 
   const { data: projects, isLoading: isLoadingProjects } = useGetProjects({ workspaceId });
   const { data: members, isLoading: isLoadingMembers } = useGetMembers({ workspaceId });
+  const { data: sprints, isLoading: isLoadingSprints } = useGetSprints({ workspaceId });
 
   const projectOptions = projects?.documents.map((project) => ({
     id: project.$id,
@@ -30,7 +32,12 @@ export const CreateTaskFormWrapper = ({ initialStatus, onCancel }: CreateTaskFor
     name: member.name,
   }));
 
-  const isLoading = isLoadingMembers || isLoadingProjects;
+  const sprintOptions = sprints?.documents.map((sprint) => ({
+    id: sprint.$id,
+    name: sprint.name,
+  }));
+
+  const isLoading = isLoadingMembers || isLoadingProjects || isLoadingSprints;
 
   if (isLoading) {
     return (
@@ -48,6 +55,7 @@ export const CreateTaskFormWrapper = ({ initialStatus, onCancel }: CreateTaskFor
       onCancel={onCancel}
       projectOptions={projectOptions ?? []}
       memberOptions={memberOptions ?? []}
+      sprintOptions={sprintOptions ?? []}
     />
   );
 };

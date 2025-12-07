@@ -1,5 +1,6 @@
 import type { Member } from '@/features/members/types';
 import type { Project } from '@/features/projects/types';
+import type { Sprint } from '@/features/sprints/types';
 import type { WithDocument } from '@/types/database';
 
 export enum TaskStatus {
@@ -33,12 +34,14 @@ export type Task = WithDocument<{
   workspaceId: string;
   position: number;
   dueDate: string;
+  sprintId: string;
   description?: string;
 }>;
 
 export type TaskWithRelations = Task & {
   project: Project;
   assignee: Member;
+  sprint?: Sprint;
 };
 
 export type TaskAttachment = WithDocument<{

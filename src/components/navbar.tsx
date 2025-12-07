@@ -20,6 +20,12 @@ export const Navbar = () => {
     if (subsection === 'all') {
       title = 'All Tasks';
       description = 'Review every task in this workspace.';
+    } else if (subsection === 'current') {
+      title = 'Current Sprint';
+      description = 'Track tasks for the sprint that is currently open.';
+    } else if (subsection === 'backlog') {
+      title = 'Backlog';
+      description = 'Focus on tasks still waiting to be scheduled.';
     } else if (!subsection || subsection === '') {
       title = 'My Tasks';
       description = 'Tasks assigned to you in this workspace.';

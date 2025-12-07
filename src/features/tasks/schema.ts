@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { BACKLOG_SPRINT_ID } from '@/features/sprints/constants';
+
 import { TaskStatus, TaskType } from './types';
 
 export const createTaskSchema = z.object({
@@ -15,6 +17,7 @@ export const createTaskSchema = z.object({
   type: z.nativeEnum(TaskType, {
     required_error: 'Task type is required.',
   }),
+  sprintId: z.string({ required_error: 'Sprint is required.' }).trim().min(1, 'Sprint is required.').default(BACKLOG_SPRINT_ID),
 });
 
 export const createTaskAttachmentSchema = z.object({

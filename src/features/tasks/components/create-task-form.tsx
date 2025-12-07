@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
+import { BACKLOG_SPRINT_ID, BACKLOG_SPRINT_LABEL } from '@/features/sprints/constants';
 import { useCreateTask } from '@/features/tasks/api/use-create-task';
 import { createTaskSchema } from '@/features/tasks/schema';
 import { TASK_TYPE_LABELS, TaskStatus, TaskType } from '@/features/tasks/types';
@@ -25,9 +26,10 @@ interface CreateTaskFormProps {
   onCancel?: () => void;
   projectOptions: { id: string; name: string; imageUrl?: string }[];
   memberOptions: { id: string; name: string }[];
+  sprintOptions: { id: string; name: string }[];
 }
 
-export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, projectOptions }: CreateTaskFormProps) => {
+export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, projectOptions, sprintOptions }: CreateTaskFormProps) => {
   const router = useRouter();
   const workspaceId = useWorkspaceId();
 
@@ -44,6 +46,7 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
       status: initialStatus ?? undefined,
       type: TaskType.TASK,
       workspaceId,
+      sprintId: BACKLOG_SPRINT_ID,
     },
   });
 
@@ -215,6 +218,37 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
                               <ProjectAvatar className="size-6" name={project.name} image={project.imageUrl} />
                               {project.name}
                             </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                disabled={isPending}
+                control={createTaskForm.control}
+                name="sprintId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sprint</FormLabel>
+
+                    <Select disabled={isPending} value={field.value ?? BACKLOG_SPRINT_ID} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select sprint" />
+                        </SelectTrigger>
+                      </FormControl>
+
+                      <FormMessage />
+
+                      <SelectContent>
+                        <SelectItem value={BACKLOG_SPRINT_ID}>{BACKLOG_SPRINT_LABEL}</SelectItem>
+
+                        {sprintOptions.map((sprint) => (
+                          <SelectItem key={sprint.id} value={sprint.id}>
+                            {sprint.name}
                           </SelectItem>
                         ))}
                       </SelectContent>

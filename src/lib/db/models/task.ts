@@ -1,5 +1,6 @@
 import { Schema, model, models } from 'mongoose';
 
+import { BACKLOG_SPRINT_ID } from '@/features/sprints/constants';
 import { TaskStatus, TaskType } from '@/features/tasks/types';
 import { attachTransform, baseSchemaOptions } from '@/lib/db/utils';
 import type { WithDocument } from '@/types/database';
@@ -13,6 +14,7 @@ export type TaskDocument = WithDocument<{
   workspaceId: string;
   position: number;
   dueDate: string;
+  sprintId: string;
   description?: string;
 }>;
 
@@ -27,6 +29,7 @@ const TaskSchema = attachTransform(
       workspaceId: { type: String, required: true },
       position: { type: Number, required: true },
       dueDate: { type: String, required: true },
+      sprintId: { type: String, required: true, default: BACKLOG_SPRINT_ID },
       description: { type: String },
     },
     baseSchemaOptions,

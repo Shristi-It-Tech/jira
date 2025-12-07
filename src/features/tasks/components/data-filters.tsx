@@ -10,9 +10,10 @@ import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 interface DataFiltersProps {
   hideProjectFilter?: boolean;
   hideAssigneeFilter?: boolean;
+  hideStatusFilter?: boolean;
 }
 
-export const DataFilters = ({ hideProjectFilter, hideAssigneeFilter }: DataFiltersProps) => {
+export const DataFilters = ({ hideProjectFilter, hideAssigneeFilter, hideStatusFilter }: DataFiltersProps) => {
   const workspaceId = useWorkspaceId();
 
   const { data: projects, isLoading: isLoadingProjects } = useGetProjects({ workspaceId });
@@ -96,25 +97,27 @@ export const DataFilters = ({ hideProjectFilter, hideAssigneeFilter }: DataFilte
         </Select>
       )}
 
-      <Select defaultValue={status ?? undefined} onValueChange={onStatusChange}>
-        <SelectTrigger className="h-8 w-full lg:w-auto">
-          <div className="flex items-center pr-2">
-            <ListChecks className="mr-2 size-4" />
-            <SelectValue placeholder="All statuses" />
-          </div>
-        </SelectTrigger>
+      {!hideStatusFilter && (
+        <Select defaultValue={status ?? undefined} onValueChange={onStatusChange}>
+          <SelectTrigger className="h-8 w-full lg:w-auto">
+            <div className="flex items-center pr-2">
+              <ListChecks className="mr-2 size-4" />
+              <SelectValue placeholder="All statuses" />
+            </div>
+          </SelectTrigger>
 
-        <SelectContent>
-          <SelectItem value="all">All statuses</SelectItem>
-          <SelectSeparator />
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectSeparator />
 
-          <SelectItem value={TaskStatus.BACKLOG}>Backlog</SelectItem>
-          <SelectItem value={TaskStatus.IN_PROGRESS}>In Progress</SelectItem>
-          <SelectItem value={TaskStatus.IN_REVIEW}>In Review</SelectItem>
-          <SelectItem value={TaskStatus.TODO}>Todo</SelectItem>
-          <SelectItem value={TaskStatus.DONE}>Done</SelectItem>
-        </SelectContent>
-      </Select>
+            <SelectItem value={TaskStatus.BACKLOG}>Backlog</SelectItem>
+            <SelectItem value={TaskStatus.IN_PROGRESS}>In Progress</SelectItem>
+            <SelectItem value={TaskStatus.IN_REVIEW}>In Review</SelectItem>
+            <SelectItem value={TaskStatus.TODO}>Todo</SelectItem>
+            <SelectItem value={TaskStatus.DONE}>Done</SelectItem>
+          </SelectContent>
+        </Select>
+      )}
 
       <Select defaultValue={type ?? undefined} onValueChange={onTypeChange}>
         <SelectTrigger className="h-8 w-full lg:w-auto">

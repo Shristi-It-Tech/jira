@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
+import { BACKLOG_SPRINT_ID, BACKLOG_SPRINT_LABEL } from '@/features/sprints/constants';
 import { useUpdateTask } from '@/features/tasks/api/use-update-task';
 import { createTaskSchema } from '@/features/tasks/schema';
 import { TASK_TYPE_LABELS, type Task, TaskStatus, TaskType } from '@/features/tasks/types';
@@ -22,10 +23,11 @@ interface EditTaskFormProps {
   onCancel?: () => void;
   projectOptions: { id: string; name: string; imageUrl?: string }[];
   memberOptions: { id: string; name: string }[];
+  sprintOptions: { id: string; name: string }[];
   initialValues: Task;
 }
 
-export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialValues }: EditTaskFormProps) => {
+export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, sprintOptions, initialValues }: EditTaskFormProps) => {
   const { mutate: createTask, isPending } = useUpdateTask();
 
   const editTaskForm = useForm<z.infer<typeof createTaskSchema>>({
@@ -34,6 +36,7 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
       ...initialValues,
       type: initialValues.type ?? TaskType.TASK,
       dueDate: initialValues.dueDate ? new Date(initialValues.dueDate) : undefined,
+      sprintId: initialValues.sprintId ?? BACKLOG_SPRINT_ID,
     },
   });
 
@@ -205,6 +208,36 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
                               <ProjectAvatar className="size-6" name={project.name} image={project.imageUrl} />
                               {project.name}
                             </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                disabled={isPending}
+                control={editTaskForm.control}
+                name="sprintId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sprint</FormLabel>
+
+                    <Select disabled={isPending} value={field.value ?? BACKLOG_SPRINT_ID} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select sprint" />
+                        </SelectTrigger>
+                      </FormControl>
+
+                      <FormMessage />
+
+                      <SelectContent>
+                        <SelectItem value={BACKLOG_SPRINT_ID}>{BACKLOG_SPRINT_LABEL}</SelectItem>
+                        {sprintOptions.map((sprint) => (
+                          <SelectItem key={sprint.id} value={sprint.id}>
+                            {sprint.name}
                           </SelectItem>
                         ))}
                       </SelectContent>

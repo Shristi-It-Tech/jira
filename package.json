@@ -114,6 +114,7 @@
     "sort-classes": "npm:prettier-plugin-tailwindcss",
     "tailwindcss": "^3.4.1",
     "tidy-imports": "npm:@trivago/prettier-plugin-sort-imports",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }
