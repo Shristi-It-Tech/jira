@@ -47,27 +47,6 @@ export const TaskBreadcrumbs = ({ project, task }: TaskBreadcrumbsProps) => {
   const handleGoBack = () => {
     const storedSource = typeof window !== 'undefined' ? window.sessionStorage.getItem(LAST_TASK_SOURCE_STORAGE_KEY) : null;
     const taskSource = searchParams.get('task-source') ?? storedSource;
-    if (taskSource === 'all') {
-      router.push(`/workspaces/${workspaceId}/tasks/all`);
-      return;
-    }
-    if (taskSource === 'mine') {
-      router.push(`/workspaces/${workspaceId}/tasks`);
-      return;
-    }
-    if (taskSource === 'backlog') {
-      router.push(`/workspaces/${workspaceId}/tasks/backlog`);
-      return;
-    }
-    if (taskSource === 'current') {
-      router.push(`/workspaces/${workspaceId}/tasks/current`);
-      return;
-    }
-    if (taskSource === 'closed') {
-      router.push(`/workspaces/${workspaceId}/tasks/closed`);
-      return;
-    }
-
     const storedView = typeof window !== 'undefined' ? window.sessionStorage.getItem(LAST_TASK_VIEW_STORAGE_KEY) : null;
     const storedOrigin =
       typeof window !== 'undefined' ? parseTaskOrigin(window.sessionStorage.getItem(LAST_TASK_ORIGIN_STORAGE_KEY)) : null;
@@ -77,16 +56,50 @@ export const TaskBreadcrumbs = ({ project, task }: TaskBreadcrumbsProps) => {
     const paramProjectId = searchParams.get('origin-project-id');
 
     const view = paramView ?? storedView ?? 'table';
+    const buildQueryString = () => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('task-source');
+      params.delete('task-origin');
+      params.delete('origin-project-id');
+      params.set('task-view', view);
+      return params.toString();
+    };
+
+    const pushWithFilters = (href: string) => {
+      const queryString = buildQueryString();
+      router.push(`${href}${queryString ? `?${queryString}` : ''}`);
+    };
+
+    if (taskSource === 'all') {
+      pushWithFilters(`/workspaces/${workspaceId}/tasks/all`);
+      return;
+    }
+    if (taskSource === 'mine') {
+      pushWithFilters(`/workspaces/${workspaceId}/tasks`);
+      return;
+    }
+    if (taskSource === 'backlog') {
+      pushWithFilters(`/workspaces/${workspaceId}/tasks/backlog`);
+      return;
+    }
+    if (taskSource === 'current') {
+      pushWithFilters(`/workspaces/${workspaceId}/tasks/current`);
+      return;
+    }
+    if (taskSource === 'closed') {
+      pushWithFilters(`/workspaces/${workspaceId}/tasks/closed`);
+      return;
+    }
 
     const storedProjectId = storedOrigin && storedOrigin.type === 'project' ? storedOrigin.projectId : null;
 
     if (paramOrigin === 'project' || storedOrigin?.type === 'project') {
       const projectIdForBack = paramProjectId ?? storedProjectId ?? task.projectId;
-      router.push(`/workspaces/${workspaceId}/projects/${projectIdForBack}?task-view=${view}`);
+      pushWithFilters(`/workspaces/${workspaceId}/projects/${projectIdForBack}`);
       return;
     }
 
-    router.push(`/workspaces/${workspaceId}/tasks?task-view=${view}`);
+    pushWithFilters(`/workspaces/${workspaceId}/tasks`);
   };
 
   return (

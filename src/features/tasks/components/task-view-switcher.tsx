@@ -203,7 +203,7 @@ export const TaskViewSwitcher = ({
   const handleRowClick = useCallback(
     (taskId: string) => {
       const normalizedView = view ?? 'table';
-      const params = new URLSearchParams();
+      const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
       params.set('task-view', normalizedView);
 
       if (projectId) {
@@ -270,7 +270,7 @@ export const TaskViewSwitcher = ({
             </TabsContent>
 
             <TabsContent value="kanban" className="mt-0">
-              <DataKanban data={tasks?.documents ?? []} onChange={onKanbanChange} />
+              <DataKanban data={tasks?.documents ?? []} onChange={onKanbanChange} onTaskClick={handleRowClick} />
             </TabsContent>
 
             <TabsContent value="calendar" className="mt-0 h-full pb-4">

@@ -10,17 +10,31 @@ import { TaskDate } from './task-date';
 
 interface KanbanCardProps {
   task: TaskWithRelations;
+  onSelect?: (taskId: string) => void;
 }
 
-export const KanbanCard = ({ task }: KanbanCardProps) => {
+export const KanbanCard = ({ task, onSelect }: KanbanCardProps) => {
   return (
-    <div className="mb-1.5 space-y-3 rounded bg-white p-2.5 shadow-sm">
+    <div
+      className="mb-1.5 space-y-3 rounded bg-white p-2.5 shadow-sm transition hover:shadow"
+      role="button"
+      tabIndex={0}
+      onClick={() => onSelect?.(task.$id)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onSelect?.(task.$id);
+        }
+      }}
+    >
       <div className="flex items-start justify-between gap-x-2">
         <p className="line-clamp-2 text-sm">{task.name}</p>
 
-        <TaskActions id={task.$id} projectId={task.projectId}>
-          <MoreHorizontal className="size-[18px] shrink-0 cursor-pointer stroke-1 text-neutral-700 transition hover:opacity-75" />
-        </TaskActions>
+        <div onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()} role="presentation">
+          <TaskActions id={task.$id} projectId={task.projectId}>
+            <MoreHorizontal className="size-[18px] shrink-0 cursor-pointer stroke-1 text-neutral-700 transition hover:opacity-75" />
+          </TaskActions>
+        </div>
       </div>
 
       <DottedSeparator />

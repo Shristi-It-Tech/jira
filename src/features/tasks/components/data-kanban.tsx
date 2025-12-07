@@ -15,9 +15,10 @@ type TasksState = {
 interface DataKanbanProps {
   data: TaskWithRelations[];
   onChange: (tasks: { $id: string; status: TaskStatus; position: number }[]) => void;
+  onTaskClick?: (taskId: string) => void;
 }
 
-export const DataKanban = ({ data, onChange }: DataKanbanProps) => {
+export const DataKanban = ({ data, onChange, onTaskClick }: DataKanbanProps) => {
   const [tasks, setTasks] = useState<TasksState>(() => {
     const initialTasks: TasksState = {
       [TaskStatus.BACKLOG]: [],
@@ -153,7 +154,7 @@ export const DataKanban = ({ data, onChange }: DataKanbanProps) => {
                     <Draggable key={task.$id} draggableId={task.$id} index={index}>
                       {(provided) => (
                         <div {...provided.draggableProps} {...provided.dragHandleProps} ref={provided.innerRef}>
-                          <KanbanCard task={task} />
+                          <KanbanCard task={task} onSelect={onTaskClick} />
                         </div>
                       )}
                     </Draggable>

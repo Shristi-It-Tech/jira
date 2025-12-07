@@ -35,8 +35,10 @@ export const TaskActions = ({ id, projectId, children }: PropsWithChildren<TaskA
     const taskOrigin = parseTaskOrigin(window.sessionStorage.getItem(LAST_TASK_ORIGIN_STORAGE_KEY));
     const taskSource = window.sessionStorage.getItem(LAST_TASK_SOURCE_STORAGE_KEY);
 
-    const params = new URLSearchParams();
-    if (taskView) params.set('task-view', taskView);
+    const params = new URLSearchParams(window.location.search);
+    if (taskView) {
+      params.set('task-view', taskView);
+    }
 
     if (taskOrigin?.type === 'project' && taskOrigin.projectId) {
       params.set('task-origin', 'project');
