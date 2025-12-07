@@ -6,6 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useDeleteTask } from '@/features/tasks/api/use-delete-task';
 import {
   LAST_TASK_ORIGIN_STORAGE_KEY,
+  LAST_TASK_QUERY_STORAGE_KEY,
   LAST_TASK_SOURCE_STORAGE_KEY,
   LAST_TASK_VIEW_STORAGE_KEY,
   parseTaskOrigin,
@@ -34,8 +35,10 @@ export const TaskActions = ({ id, projectId, children }: PropsWithChildren<TaskA
     const taskView = window.sessionStorage.getItem(LAST_TASK_VIEW_STORAGE_KEY);
     const taskOrigin = parseTaskOrigin(window.sessionStorage.getItem(LAST_TASK_ORIGIN_STORAGE_KEY));
     const taskSource = window.sessionStorage.getItem(LAST_TASK_SOURCE_STORAGE_KEY);
+    const currentSearch = window.location.search;
+    window.sessionStorage.setItem(LAST_TASK_QUERY_STORAGE_KEY, currentSearch);
 
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(currentSearch);
     if (taskView) {
       params.set('task-view', taskView);
     }

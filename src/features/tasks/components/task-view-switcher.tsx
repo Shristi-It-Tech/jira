@@ -12,15 +12,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useBulkUpdateTasks } from '@/features/tasks/api/use-bulk-update-tasks';
 import { useGetTasks } from '@/features/tasks/api/use-get-tasks';
 import {
-  LAST_TASK_FILTERS_STORAGE_KEY,
   LAST_TASK_ORIGIN_STORAGE_KEY,
+  LAST_TASK_QUERY_STORAGE_KEY,
   LAST_TASK_SOURCE_STORAGE_KEY,
   LAST_TASK_VIEW_STORAGE_KEY,
   serializeTaskOrigin,
 } from '@/features/tasks/constants';
 import { useCreateTaskModal } from '@/features/tasks/hooks/use-create-task-modal';
 import { useTaskFilters } from '@/features/tasks/hooks/use-task-filters';
-import type { TaskStatus, TaskType } from '@/features/tasks/types';
+import type { TaskStatus } from '@/features/tasks/types';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 
 import { getColumns } from './columns';
@@ -39,7 +39,6 @@ interface TaskViewSwitcherProps {
   lockedStatus?: TaskStatus;
   resetFiltersOnMount?: boolean;
   lockedSprintId?: string;
-  storageKey?: string;
 }
 
 export const TaskViewSwitcher = ({
@@ -51,7 +50,6 @@ export const TaskViewSwitcher = ({
   lockedStatus,
   resetFiltersOnMount,
   lockedSprintId,
-  storageKey,
 }: TaskViewSwitcherProps) => {
   const pathname = usePathname();
   const [view, setView] = useQueryState('task-view', {
@@ -61,14 +59,12 @@ export const TaskViewSwitcher = ({
   const { status, assigneeId, projectId: filteredProjectId, search, type } = filters;
 
   const workspaceId = useWorkspaceId();
-  const filterStorageKey = storageKey ?? (pathname ? `${LAST_TASK_FILTERS_STORAGE_KEY}:${pathname}` : LAST_TASK_FILTERS_STORAGE_KEY);
 
   const { open } = useCreateTaskModal();
   const router = useRouter();
   const effectiveAssigneeId = assigneeId ?? initialAssigneeId ?? undefined;
   const tableColumns = useMemo(() => getColumns({ includeProjectColumn: !projectId }), [projectId]);
   const hasResetFilters = useRef(false);
-  const hasHydratedFilters = useRef(resetFiltersOnMount ?? false);
 
   const effectiveStatus = lockedStatus ?? status;
   const effectiveProjectId = projectId ?? filteredProjectId ?? null;
@@ -106,67 +102,16 @@ export const TaskViewSwitcher = ({
   }, [taskSource]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const allowPersist = hasHydratedFilters.current || resetFiltersOnMount;
-    if (!allowPersist) return;
-
-    const payload = JSON.stringify({
-      status: lockedStatus ?? status ?? null,
-      assigneeId: effectiveAssigneeId ?? null,
-      projectId: projectId ?? filteredProjectId ?? null,
-      search: search ?? null,
-      type: type ?? null,
-      sprintId: lockedSprintId ?? null,
+    if (resetFiltersOnMount || hasResetFilters.current) return;
+    hasResetFilters.current = true;
+    setFilters({
+      projectId: projectId ?? null,
+      assigneeId: initialAssigneeId ?? null,
+      status: lockedStatus ?? null,
+      type: null,
+      search: null,
     });
-
-    window.sessionStorage.setItem(filterStorageKey, payload);
-  }, [
-    filterStorageKey,
-    lockedStatus,
-    status,
-    effectiveAssigneeId,
-    initialAssigneeId,
-    projectId,
-    filteredProjectId,
-    search,
-    type,
-    lockedSprintId,
-    resetFiltersOnMount,
-  ]);
-
-  useEffect(() => {
-    if (resetFiltersOnMount || hasHydratedFilters.current) return;
-    if (typeof window === 'undefined') return;
-
-    const savedFilters = window.sessionStorage.getItem(filterStorageKey);
-
-    if (!savedFilters) {
-      hasHydratedFilters.current = true;
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(savedFilters) as {
-        status: TaskStatus | null;
-        assigneeId: string | null;
-        projectId: string | null;
-        search: string | null;
-        type: TaskType | null;
-      };
-
-      setFilters({
-        status: parsed.status ?? null,
-        assigneeId: parsed.assigneeId ?? null,
-        projectId: parsed.projectId ?? null,
-        search: parsed.search ?? null,
-        type: parsed.type ?? null,
-      });
-    } catch (error) {
-      console.error('[TASK_FILTERS_HYDRATE]', error);
-    } finally {
-      hasHydratedFilters.current = true;
-    }
-  }, [filterStorageKey, resetFiltersOnMount, setFilters, status, assigneeId, projectId, search, type]);
+  }, [resetFiltersOnMount, setFilters, projectId, initialAssigneeId, lockedStatus]);
 
   useEffect(() => {
     if (!initialAssigneeId || assigneeId) return;
@@ -204,6 +149,9 @@ export const TaskViewSwitcher = ({
     (taskId: string) => {
       const normalizedView = view ?? 'table';
       const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.setItem(LAST_TASK_QUERY_STORAGE_KEY, window.location.search);
+      }
       params.set('task-view', normalizedView);
 
       if (projectId) {

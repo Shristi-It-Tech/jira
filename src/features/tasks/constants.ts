@@ -1,7 +1,7 @@
 export const LAST_TASK_VIEW_STORAGE_KEY = 'jira-clone:lastTaskView';
 export const LAST_TASK_ORIGIN_STORAGE_KEY = 'jira-clone:lastTaskOrigin';
 export const LAST_TASK_SOURCE_STORAGE_KEY = 'jira-clone:lastTaskSource';
-export const LAST_TASK_FILTERS_STORAGE_KEY = 'jira-clone:lastTaskFilters';
+export const LAST_TASK_QUERY_STORAGE_KEY = 'jira-clone:lastTaskQuery';
 
 export type TaskOriginHistory = { type: 'workspace' } | { type: 'project'; projectId: string };
 

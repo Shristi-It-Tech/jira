@@ -25,8 +25,6 @@ export const ClosedSprintsView = ({ sprints }: ClosedSprintsViewProps) => {
   return (
     <div className="space-y-4">
       {sprints.map((sprint, index) => {
-        const storageKey = `${pathname}:${sprint.$id}:closed-sprint`;
-
         return (
           <details key={sprint.$id} className="group overflow-hidden rounded-lg border bg-card text-card-foreground" open={index === 0}>
             <summary className="flex cursor-pointer items-center justify-between gap-2 px-4 py-3 font-medium [&::-webkit-details-marker]:hidden">
@@ -41,13 +39,7 @@ export const ClosedSprintsView = ({ sprints }: ClosedSprintsViewProps) => {
             </summary>
 
             <div className="border-t px-2 py-4">
-              <TaskViewSwitcher
-                defaultSorting={[{ id: 'dueDate', desc: true }]}
-                taskSource="closed"
-                lockedSprintId={sprint.$id}
-                storageKey={storageKey}
-                resetFiltersOnMount
-              />
+              <TaskViewSwitcher defaultSorting={[{ id: 'dueDate', desc: true }]} taskSource="closed" lockedSprintId={sprint.$id} />
             </div>
           </details>
         );

@@ -8,6 +8,7 @@ import type { Project } from '@/features/projects/types';
 import { useDeleteTask } from '@/features/tasks/api/use-delete-task';
 import {
   LAST_TASK_ORIGIN_STORAGE_KEY,
+  LAST_TASK_QUERY_STORAGE_KEY,
   LAST_TASK_SOURCE_STORAGE_KEY,
   LAST_TASK_VIEW_STORAGE_KEY,
   parseTaskOrigin,
@@ -50,17 +51,17 @@ export const TaskBreadcrumbs = ({ project, task }: TaskBreadcrumbsProps) => {
     const storedView = typeof window !== 'undefined' ? window.sessionStorage.getItem(LAST_TASK_VIEW_STORAGE_KEY) : null;
     const storedOrigin =
       typeof window !== 'undefined' ? parseTaskOrigin(window.sessionStorage.getItem(LAST_TASK_ORIGIN_STORAGE_KEY)) : null;
+    const storedQuery = typeof window !== 'undefined' ? window.sessionStorage.getItem(LAST_TASK_QUERY_STORAGE_KEY) : null;
 
     const paramView = searchParams.get('task-view');
     const paramOrigin = searchParams.get('task-origin');
     const paramProjectId = searchParams.get('origin-project-id');
 
     const view = paramView ?? storedView ?? 'table';
+
     const buildQueryString = () => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.delete('task-source');
-      params.delete('task-origin');
-      params.delete('origin-project-id');
+      const baseQuery = storedQuery && storedQuery.startsWith('?') ? storedQuery.slice(1) : storedQuery;
+      const params = baseQuery ? new URLSearchParams(baseQuery) : new URLSearchParams(searchParams.toString());
       params.set('task-view', view);
       return params.toString();
     };

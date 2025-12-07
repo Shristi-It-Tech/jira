@@ -34,7 +34,7 @@ const app = new Hono()
         return ctx.json({ error: 'Unauthorized.' }, 401);
       }
 
-      const sprintDocs = await SprintModel.find({ workspaceId }).sort({ startDate: 1 }).exec();
+      const sprintDocs = await SprintModel.find({ workspaceId }).sort({ endDate: -1 }).exec();
       const sprints = sprintDocs.map((doc) => doc.toObject<Sprint>());
 
       return ctx.json({
