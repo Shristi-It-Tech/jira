@@ -29,7 +29,12 @@ const CurrentSprintPage = async ({ params }: CurrentSprintPageProps) => {
         </div>
       )}
 
-      <TaskViewSwitcher defaultSorting={[{ id: 'dueDate', desc: true }]} taskSource="all" lockedSprintId={sprintId} resetFiltersOnMount />
+      <TaskViewSwitcher
+        defaultSorting={[{ id: 'dueDate', desc: true }]}
+        taskSource="current"
+        lockedSprintId={sprintId}
+        resetFiltersOnMount
+      />
     </div>
   );
 };

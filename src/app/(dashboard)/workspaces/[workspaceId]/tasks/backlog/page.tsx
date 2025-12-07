@@ -13,7 +13,7 @@ const BacklogTasksPage = async () => {
     <div className="flex h-full flex-col">
       <TaskViewSwitcher
         defaultSorting={[{ id: 'dueDate', desc: true }]}
-        taskSource="all"
+        taskSource="backlog"
         lockedSprintId={BACKLOG_SPRINT_ID}
         resetFiltersOnMount
       />

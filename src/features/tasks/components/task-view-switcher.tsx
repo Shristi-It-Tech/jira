@@ -34,7 +34,7 @@ interface TaskViewSwitcherProps {
   hideProjectFilter?: boolean;
   initialAssigneeId?: string | null;
   defaultSorting?: SortingState;
-  taskSource?: 'all' | 'mine';
+  taskSource?: 'all' | 'mine' | 'backlog' | 'current';
   lockedStatus?: TaskStatus;
   resetFiltersOnMount?: boolean;
   lockedSprintId?: string;
