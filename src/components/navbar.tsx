@@ -26,6 +26,12 @@ export const Navbar = () => {
     } else if (subsection === 'backlog') {
       title = 'Backlog';
       description = 'Focus on tasks still waiting to be scheduled.';
+    } else if (subsection === 'current') {
+      title = 'Current Sprint';
+      description = 'Track tasks for the sprint that is currently open.';
+    } else if (subsection === 'closed') {
+      title = 'Closed Sprints';
+      description = 'Review tasks from previously closed sprints.';
     } else if (!subsection || subsection === '') {
       title = 'My Tasks';
       description = 'Tasks assigned to you in this workspace.';

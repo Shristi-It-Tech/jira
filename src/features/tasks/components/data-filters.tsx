@@ -54,7 +54,7 @@ export const DataFilters = ({ hideProjectFilter, hideAssigneeFilter, hideStatusF
   return (
     <div className="flex flex-col gap-2 lg:flex-row">
       {!hideProjectFilter && (
-        <Select defaultValue={projectId ?? undefined} onValueChange={onProjectChange}>
+        <Select value={projectId ?? undefined} onValueChange={onProjectChange}>
           <SelectTrigger className="h-8 w-full lg:w-auto">
             <div className="flex items-center pr-2">
               <Folder className="mr-2 size-4" />
@@ -76,7 +76,7 @@ export const DataFilters = ({ hideProjectFilter, hideAssigneeFilter, hideStatusF
       )}
 
       {!hideAssigneeFilter && (
-        <Select defaultValue={assigneeId ?? undefined} onValueChange={onAssigneeChange}>
+        <Select value={assigneeId ?? undefined} onValueChange={onAssigneeChange}>
           <SelectTrigger className="h-8 w-full lg:w-auto">
             <div className="flex items-center pr-2">
               <UserIcon className="mr-2 size-4" />
@@ -98,7 +98,7 @@ export const DataFilters = ({ hideProjectFilter, hideAssigneeFilter, hideStatusF
       )}
 
       {!hideStatusFilter && (
-        <Select defaultValue={status ?? undefined} onValueChange={onStatusChange}>
+        <Select value={status ?? undefined} onValueChange={onStatusChange}>
           <SelectTrigger className="h-8 w-full lg:w-auto">
             <div className="flex items-center pr-2">
               <ListChecks className="mr-2 size-4" />
@@ -119,7 +119,7 @@ export const DataFilters = ({ hideProjectFilter, hideAssigneeFilter, hideStatusF
         </Select>
       )}
 
-      <Select defaultValue={type ?? undefined} onValueChange={onTypeChange}>
+      <Select value={type ?? undefined} onValueChange={onTypeChange}>
         <SelectTrigger className="h-8 w-full lg:w-auto">
           <div className="flex items-center pr-2">
             <Tag className="mr-2 size-4" />

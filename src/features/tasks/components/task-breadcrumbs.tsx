@@ -63,6 +63,10 @@ export const TaskBreadcrumbs = ({ project, task }: TaskBreadcrumbsProps) => {
       router.push(`/workspaces/${workspaceId}/tasks/current`);
       return;
     }
+    if (taskSource === 'closed') {
+      router.push(`/workspaces/${workspaceId}/tasks/closed`);
+      return;
+    }
 
     const storedView = typeof window !== 'undefined' ? window.sessionStorage.getItem(LAST_TASK_VIEW_STORAGE_KEY) : null;
     const storedOrigin =

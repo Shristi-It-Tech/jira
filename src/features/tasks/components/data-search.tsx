@@ -6,10 +6,14 @@ import { useTaskFilters } from '@/features/tasks/hooks/use-task-filters';
 import { useDebounce } from '@/hooks/use-debounce';
 
 export const DataSearch = () => {
-  const [value, setValue] = useState('');
+  const [{ search }, setFilters] = useTaskFilters();
+  const [value, setValue] = useState(search ?? '');
 
   const debouncedValue = useDebounce(value);
-  const [_filters, setFilters] = useTaskFilters();
+
+  useEffect(() => {
+    setValue(search ?? '');
+  }, [search]);
 
   useEffect(() => {
     setFilters({ search: debouncedValue.trim().length > 0 ? debouncedValue : null });
