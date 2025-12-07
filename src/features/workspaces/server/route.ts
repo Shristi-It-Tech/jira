@@ -79,6 +79,15 @@ const app = new Hono()
     const user = ctx.get('user');
     const { name, image } = ctx.req.valid('form');
 
+    const [memberships, adminMembership] = await Promise.all([
+      MemberModel.find({ userId: user.$id }).select('_id role workspaceId').lean(),
+      MemberModel.findOne({ userId: user.$id, role: MemberRole.ADMIN }).select('_id').lean(),
+    ]);
+
+    if (memberships.length > 0 && !adminMembership) {
+      return ctx.json({ error: 'Unauthorized.' }, 401);
+    }
+
     const normalizedImage = typeof image === 'string' && image.length === 0 ? undefined : image;
     const imageId = await persistImage(normalizedImage ?? undefined);
 

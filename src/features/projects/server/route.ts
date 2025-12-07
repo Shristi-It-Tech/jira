@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 
 import { IMAGES_BUCKET } from '@/config/storage';
+import { MemberRole } from '@/features/members/types';
 import { getMember } from '@/features/members/utils';
 import { createProjectSchema, updateProjectSchema } from '@/features/projects/schema';
 import type { Project } from '@/features/projects/types';
@@ -49,7 +50,7 @@ const app = new Hono()
 
     const member = await getMember({ workspaceId, userId: user.$id });
 
-    if (!member) {
+    if (!member || member.role !== MemberRole.ADMIN) {
       return ctx.json({ error: 'Unauthorized.' }, 401);
     }
 
@@ -116,7 +117,7 @@ const app = new Hono()
     const project = projectDoc.toObject<Project>();
     const member = await getMember({ workspaceId: project.workspaceId, userId: user.$id });
 
-    if (!member) {
+    if (!member || member.role !== MemberRole.ADMIN) {
       return ctx.json({ error: 'Unauthorized.' }, 401);
     }
 
@@ -137,9 +138,9 @@ const app = new Hono()
 
     const member = await getMember({ workspaceId: projectDoc.workspaceId, userId: user.$id });
 
-    if (!member) {
-      return ctx.json({ error: 'Unauthorized.' }, 401);
-    }
+  if (!member || member.role !== MemberRole.ADMIN) {
+    return ctx.json({ error: 'Unauthorized.' }, 401);
+  }
 
     const normalizedImage = typeof image === 'string' && image.length === 0 ? undefined : image;
     const imageId = await persistImage(normalizedImage, projectDoc.imageId);
