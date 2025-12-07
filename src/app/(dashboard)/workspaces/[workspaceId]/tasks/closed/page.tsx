@@ -19,10 +19,8 @@ const ClosedSprintsPage = async ({ params }: ClosedSprintsPageProps) => {
 
   await connectToDatabase();
 
-  const sprintDocs = await SprintModel.find({ workspaceId: params.workspaceId, status: SprintStatus.CLOSED }).sort({
-    endDate: -1,
-  });
-  const sprints = sprintDocs.map((doc) => doc.toObject<Sprint>());
+  const sprintDocs = await SprintModel.find({ workspaceId: params.workspaceId, status: SprintStatus.CLOSED }).sort({ endDate: -1 }).exec();
+  const sprints = sprintDocs.map((doc) => doc.toObject() as Sprint);
 
   return (
     <div className="flex h-full flex-col gap-4">
