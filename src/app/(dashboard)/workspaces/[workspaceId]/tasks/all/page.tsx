@@ -10,10 +10,7 @@ const AllTasksPage = async () => {
 
   return (
     <div className="flex h-full flex-col">
-      <TaskViewSwitcher
-        defaultSorting={[{ id: 'dueDate', desc: true }]}
-        taskSource="all"
-      />
+      <TaskViewSwitcher defaultSorting={[{ id: 'dueDate', desc: true }]} taskSource="all" />
     </div>
   );
 };

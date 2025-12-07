@@ -19,11 +19,7 @@ const TasksPage = async ({ params }: TasksPageProps) => {
 
   return (
     <div className="flex h-full flex-col">
-      <TaskViewSwitcher
-        initialAssigneeId={member?.$id ?? null}
-        defaultSorting={[{ id: 'dueDate', desc: true }]}
-        taskSource="mine"
-      />
+      <TaskViewSwitcher initialAssigneeId={member?.$id ?? null} defaultSorting={[{ id: 'dueDate', desc: true }]} taskSource="mine" />
     </div>
   );
 };

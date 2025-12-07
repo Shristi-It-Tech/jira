@@ -45,11 +45,8 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
   const { data: commentsData, isLoading: isLoadingComments } = useGetComments({ taskId });
   const { data: membersData, isLoading: isLoadingMembers } = useGetMembers({ workspaceId });
 
-  const members: Member[] = membersData?.documents ?? [];
-  const currentMember = useMemo(
-    () => members.find((member) => member.userId === currentUser?.$id),
-    [members, currentUser],
-  );
+  const members: Member[] = useMemo(() => membersData?.documents ?? [], [membersData]);
+  const currentMember = useMemo(() => members.find((member) => member.userId === currentUser?.$id), [members, currentUser]);
 
   const commentTree = useMemo(() => {
     if (!commentsData?.documents) return [];

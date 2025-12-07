@@ -4,7 +4,12 @@ import type { PropsWithChildren } from 'react';
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useDeleteTask } from '@/features/tasks/api/use-delete-task';
-import { LAST_TASK_ORIGIN_STORAGE_KEY, LAST_TASK_SOURCE_STORAGE_KEY, LAST_TASK_VIEW_STORAGE_KEY, parseTaskOrigin } from '@/features/tasks/constants';
+import {
+  LAST_TASK_ORIGIN_STORAGE_KEY,
+  LAST_TASK_SOURCE_STORAGE_KEY,
+  LAST_TASK_VIEW_STORAGE_KEY,
+  parseTaskOrigin,
+} from '@/features/tasks/constants';
 import { useEditTaskModal } from '@/features/tasks/hooks/use-edit-task-modal';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { useConfirm } from '@/hooks/use-confirm';

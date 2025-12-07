@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { IMAGES_BUCKET } from '@/config/storage';
 import { createCommentSchema } from '@/features/comments/schema';
 import type { CommentDocument, CommentWithAuthor } from '@/features/comments/types';
-import { MemberRole, type Member, type MemberDocument } from '@/features/members/types';
+import { type Member, type MemberDocument, MemberRole } from '@/features/members/types';
 import { getMember } from '@/features/members/utils';
 import type { Project } from '@/features/projects/types';
 import { createTaskSchema } from '@/features/tasks/schema';
@@ -286,17 +286,17 @@ const app = new Hono()
 
     const userDoc = await UserModel.findById(member.userId).exec();
 
-  return ctx.json({
-    data: {
-      ...commentDoc.toObject<CommentDocument>(),
-      mentions: mentions ?? [],
-      author: {
-        ...member,
-        name: userDoc?.name ?? '',
-        email: userDoc?.email ?? '',
+    return ctx.json({
+      data: {
+        ...commentDoc.toObject<CommentDocument>(),
+        mentions: mentions ?? [],
+        author: {
+          ...member,
+          name: userDoc?.name ?? '',
+          email: userDoc?.email ?? '',
+        },
       },
-    },
-  });
+    });
   })
   .delete('/:taskId/comments/:commentId', sessionMiddleware, async (ctx) => {
     const user = ctx.get('user');

@@ -6,8 +6,13 @@ import { Button } from '@/components/ui/button';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
 import type { Project } from '@/features/projects/types';
 import { useDeleteTask } from '@/features/tasks/api/use-delete-task';
+import {
+  LAST_TASK_ORIGIN_STORAGE_KEY,
+  LAST_TASK_SOURCE_STORAGE_KEY,
+  LAST_TASK_VIEW_STORAGE_KEY,
+  parseTaskOrigin,
+} from '@/features/tasks/constants';
 import type { Task } from '@/features/tasks/types';
-import { LAST_TASK_ORIGIN_STORAGE_KEY, LAST_TASK_SOURCE_STORAGE_KEY, LAST_TASK_VIEW_STORAGE_KEY, parseTaskOrigin } from '@/features/tasks/constants';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { useConfirm } from '@/hooks/use-confirm';
 
@@ -52,7 +57,8 @@ export const TaskBreadcrumbs = ({ project, task }: TaskBreadcrumbsProps) => {
     }
 
     const storedView = typeof window !== 'undefined' ? window.sessionStorage.getItem(LAST_TASK_VIEW_STORAGE_KEY) : null;
-    const storedOrigin = typeof window !== 'undefined' ? parseTaskOrigin(window.sessionStorage.getItem(LAST_TASK_ORIGIN_STORAGE_KEY)) : null;
+    const storedOrigin =
+      typeof window !== 'undefined' ? parseTaskOrigin(window.sessionStorage.getItem(LAST_TASK_ORIGIN_STORAGE_KEY)) : null;
 
     const paramView = searchParams.get('task-view');
     const paramOrigin = searchParams.get('task-origin');

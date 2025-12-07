@@ -11,7 +11,12 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useBulkUpdateTasks } from '@/features/tasks/api/use-bulk-update-tasks';
 import { useGetTasks } from '@/features/tasks/api/use-get-tasks';
-import { LAST_TASK_ORIGIN_STORAGE_KEY, LAST_TASK_SOURCE_STORAGE_KEY, LAST_TASK_VIEW_STORAGE_KEY, serializeTaskOrigin } from '@/features/tasks/constants';
+import {
+  LAST_TASK_ORIGIN_STORAGE_KEY,
+  LAST_TASK_SOURCE_STORAGE_KEY,
+  LAST_TASK_VIEW_STORAGE_KEY,
+  serializeTaskOrigin,
+} from '@/features/tasks/constants';
 import { useCreateTaskModal } from '@/features/tasks/hooks/use-create-task-modal';
 import { useTaskFilters } from '@/features/tasks/hooks/use-task-filters';
 import type { TaskStatus } from '@/features/tasks/types';
@@ -157,12 +162,7 @@ export const TaskViewSwitcher = ({
         ) : (
           <>
             <TabsContent value="table" className="mt-0">
-              <DataTable
-                columns={columns}
-                data={tasks?.documents ?? []}
-                onRowClick={handleRowClick}
-                initialSorting={defaultSorting}
-              />
+              <DataTable columns={columns} data={tasks?.documents ?? []} onRowClick={handleRowClick} initialSorting={defaultSorting} />
             </TabsContent>
 
             <TabsContent value="kanban" className="mt-0">
