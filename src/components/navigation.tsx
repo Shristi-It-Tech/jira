@@ -3,7 +3,7 @@
 import { Settings, UsersIcon } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { GoCheckCircle, GoCheckCircleFill, GoHome, GoHomeFill } from 'react-icons/go';
+import { GoCheckCircle, GoCheckCircleFill, GoHome, GoHomeFill, GoListUnordered } from 'react-icons/go';
 
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { cn } from '@/lib/utils';
@@ -14,6 +14,12 @@ const routes = [
     href: '',
     icon: GoHome,
     activeIcon: GoHomeFill,
+  },
+  {
+    label: 'All Tasks',
+    href: '/tasks/all',
+    icon: GoListUnordered,
+    activeIcon: GoListUnordered,
   },
   {
     label: 'My Tasks',

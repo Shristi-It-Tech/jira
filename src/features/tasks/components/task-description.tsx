@@ -69,7 +69,9 @@ export const TaskDescription = ({ task }: TaskDescriptionProps) => {
           </Button>
         </div>
       ) : (
-        <div>{task.description || <span className="italic text-muted-foreground">No description set...</span>}</div>
+        <div className="whitespace-pre-wrap">
+          {task.description || <span className="italic text-muted-foreground">No description set...</span>}
+        </div>
       )}
     </div>
   );

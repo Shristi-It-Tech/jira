@@ -1,6 +1,4 @@
 import { Folder, ListChecks, UserIcon } from 'lucide-react';
-
-import { DatePicker } from '@/components/date-picker';
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useGetMembers } from '@/features/members/api/use-get-members';
 import { useGetProjects } from '@/features/projects/api/use-get-projects';
@@ -10,9 +8,10 @@ import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 
 interface DataFiltersProps {
   hideProjectFilter?: boolean;
+  hideAssigneeFilter?: boolean;
 }
 
-export const DataFilters = ({ hideProjectFilter }: DataFiltersProps) => {
+export const DataFilters = ({ hideProjectFilter, hideAssigneeFilter }: DataFiltersProps) => {
   const workspaceId = useWorkspaceId();
 
   const { data: projects, isLoading: isLoadingProjects } = useGetProjects({ workspaceId });
@@ -30,7 +29,7 @@ export const DataFilters = ({ hideProjectFilter }: DataFiltersProps) => {
     label: member.name,
   }));
 
-  const [{ status, assigneeId, projectId, dueDate }, setFilters] = useTaskFilters();
+  const [{ status, assigneeId, projectId }, setFilters] = useTaskFilters();
 
   const onStatusChange = (value: string) => {
     setFilters({ status: value === 'all' ? null : (value as TaskStatus) });
@@ -68,25 +67,27 @@ export const DataFilters = ({ hideProjectFilter }: DataFiltersProps) => {
         </SelectContent>
       </Select>
 
-      <Select defaultValue={assigneeId ?? undefined} onValueChange={onAssigneeChange}>
-        <SelectTrigger className="h-8 w-full lg:w-auto">
-          <div className="flex items-center pr-2">
-            <UserIcon className="mr-2 size-4" />
-            <SelectValue placeholder="All assignees" />
-          </div>
-        </SelectTrigger>
+      {!hideAssigneeFilter && (
+        <Select defaultValue={assigneeId ?? undefined} onValueChange={onAssigneeChange}>
+          <SelectTrigger className="h-8 w-full lg:w-auto">
+            <div className="flex items-center pr-2">
+              <UserIcon className="mr-2 size-4" />
+              <SelectValue placeholder="All assignees" />
+            </div>
+          </SelectTrigger>
 
-        <SelectContent>
-          <SelectItem value="all">All assignees</SelectItem>
-          <SelectSeparator />
+          <SelectContent>
+            <SelectItem value="all">All assignees</SelectItem>
+            <SelectSeparator />
 
-          {memberOptions?.map((member) => (
-            <SelectItem key={member.value} value={member.value}>
-              {member.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+            {memberOptions?.map((member) => (
+              <SelectItem key={member.value} value={member.value}>
+                {member.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
 
       {!hideProjectFilter && (
         <Select defaultValue={projectId ?? undefined} onValueChange={onProjectChange}>
@@ -109,18 +110,6 @@ export const DataFilters = ({ hideProjectFilter }: DataFiltersProps) => {
           </SelectContent>
         </Select>
       )}
-
-      <DatePicker
-        placeholder="Due date"
-        className="h-8 w-full lg:w-auto"
-        value={dueDate ? new Date(dueDate) : undefined}
-        onChange={(date) => {
-          setFilters({
-            dueDate: date ? date.toISOString() : null,
-          });
-        }}
-        showReset
-      />
     </div>
   );
 };

@@ -1,12 +1,13 @@
-import { ChevronRight, Trash } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Trash } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
 import type { Project } from '@/features/projects/types';
 import { useDeleteTask } from '@/features/tasks/api/use-delete-task';
 import type { Task } from '@/features/tasks/types';
+import { LAST_TASK_ORIGIN_STORAGE_KEY, LAST_TASK_SOURCE_STORAGE_KEY, LAST_TASK_VIEW_STORAGE_KEY, parseTaskOrigin } from '@/features/tasks/constants';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { useConfirm } from '@/hooks/use-confirm';
 
@@ -17,6 +18,7 @@ interface TaskBreadcrumbsProps {
 
 export const TaskBreadcrumbs = ({ project, task }: TaskBreadcrumbsProps) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const workspaceId = useWorkspaceId();
   const [ConfirmDialog, confirm] = useConfirm('Delete task?', 'This action cannot be undone.', 'destructive');
 
@@ -37,6 +39,38 @@ export const TaskBreadcrumbs = ({ project, task }: TaskBreadcrumbsProps) => {
     );
   };
 
+  const handleGoBack = () => {
+    const storedSource = typeof window !== 'undefined' ? window.sessionStorage.getItem(LAST_TASK_SOURCE_STORAGE_KEY) : null;
+    const taskSource = searchParams.get('task-source') ?? storedSource;
+    if (taskSource === 'all') {
+      router.push(`/workspaces/${workspaceId}/tasks/all`);
+      return;
+    }
+    if (taskSource === 'mine') {
+      router.push(`/workspaces/${workspaceId}/tasks`);
+      return;
+    }
+
+    const storedView = typeof window !== 'undefined' ? window.sessionStorage.getItem(LAST_TASK_VIEW_STORAGE_KEY) : null;
+    const storedOrigin = typeof window !== 'undefined' ? parseTaskOrigin(window.sessionStorage.getItem(LAST_TASK_ORIGIN_STORAGE_KEY)) : null;
+
+    const paramView = searchParams.get('task-view');
+    const paramOrigin = searchParams.get('task-origin');
+    const paramProjectId = searchParams.get('origin-project-id');
+
+    const view = paramView ?? storedView ?? 'table';
+
+    const storedProjectId = storedOrigin && storedOrigin.type === 'project' ? storedOrigin.projectId : null;
+
+    if (paramOrigin === 'project' || storedOrigin?.type === 'project') {
+      const projectIdForBack = paramProjectId ?? storedProjectId ?? task.projectId;
+      router.push(`/workspaces/${workspaceId}/projects/${projectIdForBack}?task-view=${view}`);
+      return;
+    }
+
+    router.push(`/workspaces/${workspaceId}/tasks?task-view=${view}`);
+  };
+
   return (
     <div className="flex items-center gap-x-2">
       <ConfirmDialog />
@@ -50,10 +84,17 @@ export const TaskBreadcrumbs = ({ project, task }: TaskBreadcrumbsProps) => {
       <ChevronRight className="size-4 text-muted-foreground lg:size-5" />
       <p className="text-sm font-semibold lg:text-lg">{task.name}</p>
 
-      <Button disabled={isPending} onClick={handleDeleteTask} className="ml-auto" variant="destructive" size="sm">
-        <Trash className="size-4 lg:mr-2" />
-        <span className="hidden lg:block">Delete task</span>
-      </Button>
+      <div className="ml-auto flex items-center gap-x-2">
+        <Button onClick={handleGoBack} variant="outline" size="sm">
+          <ArrowLeft className="size-4 lg:mr-2" />
+          <span className="hidden lg:block">Back</span>
+        </Button>
+
+        <Button disabled={isPending} onClick={handleDeleteTask} variant="destructive" size="sm">
+          <Trash className="size-4 lg:mr-2" />
+          <span className="hidden lg:block">Delete task</span>
+        </Button>
+      </div>
     </div>
   );
 };

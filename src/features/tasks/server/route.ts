@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { IMAGES_BUCKET } from '@/config/storage';
 import { createCommentSchema } from '@/features/comments/schema';
 import type { CommentDocument, CommentWithAuthor } from '@/features/comments/types';
-import type { Member, MemberDocument } from '@/features/members/types';
+import { MemberRole, type Member, type MemberDocument } from '@/features/members/types';
 import { getMember } from '@/features/members/utils';
 import type { Project } from '@/features/projects/types';
 import { createTaskSchema } from '@/features/tasks/schema';
@@ -286,15 +286,75 @@ const app = new Hono()
 
     const userDoc = await UserModel.findById(member.userId).exec();
 
+  return ctx.json({
+    data: {
+      ...commentDoc.toObject<CommentDocument>(),
+      mentions: mentions ?? [],
+      author: {
+        ...member,
+        name: userDoc?.name ?? '',
+        email: userDoc?.email ?? '',
+      },
+    },
+  });
+  })
+  .delete('/:taskId/comments/:commentId', sessionMiddleware, async (ctx) => {
+    const user = ctx.get('user');
+    const { taskId, commentId } = ctx.req.param();
+
+    const taskDoc = await TaskModel.findById(taskId).exec();
+
+    if (!taskDoc) {
+      return ctx.json({ error: 'Task not found.' }, 404);
+    }
+
+    const member = await getMember({ workspaceId: taskDoc.workspaceId, userId: user.$id });
+
+    if (!member) {
+      return ctx.json({ error: 'Unauthorized.' }, 401);
+    }
+
+    const commentDoc = await CommentModel.findById(commentId).exec();
+
+    if (!commentDoc || commentDoc.taskId !== taskId) {
+      return ctx.json({ error: 'Comment not found.' }, 404);
+    }
+
+    if (commentDoc.memberId !== member.$id && member.role !== MemberRole.ADMIN) {
+      return ctx.json({ error: 'Forbidden.' }, 403);
+    }
+
+    const comments = await CommentModel.find({ taskId }).select('_id parentId').lean();
+    const childMap = comments.reduce<Map<string, string[]>>((map, comment) => {
+      if (!comment.parentId) return map;
+      const parentId = comment.parentId.toString();
+      if (!map.has(parentId)) {
+        map.set(parentId, []);
+      }
+      map.get(parentId)!.push(comment._id.toString());
+      return map;
+    }, new Map());
+
+    const idsToDelete = new Set<string>([commentId]);
+    const queue = [commentId];
+
+    while (queue.length > 0) {
+      const currentId = queue.shift()!;
+      const children = childMap.get(currentId) ?? [];
+
+      children.forEach((childId) => {
+        if (!idsToDelete.has(childId)) {
+          idsToDelete.add(childId);
+          queue.push(childId);
+        }
+      });
+    }
+
+    await CommentModel.deleteMany({ _id: { $in: Array.from(idsToDelete) } });
+
     return ctx.json({
       data: {
-        ...commentDoc.toObject<CommentDocument>(),
-        mentions: mentions ?? [],
-        author: {
-          ...member,
-          name: userDoc?.name ?? '',
-          email: userDoc?.email ?? '',
-        },
+        deletedIds: Array.from(idsToDelete),
       },
     });
   })

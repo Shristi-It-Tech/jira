@@ -19,10 +19,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  onRowClick?: (taskId: string) => void;
+  initialSorting?: SortingState;
 }
 
-export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = useState<SortingState>([]);
+declare module '@tanstack/react-table' {
+  interface TableMeta<TData> {
+    onRowClick?: (taskId: string) => void;
+  }
+}
+
+export function DataTable<TData, TValue>({ columns, data, onRowClick, initialSorting }: DataTableProps<TData, TValue>) {
+  const [sorting, setSorting] = useState<SortingState>(initialSorting ?? []);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
   const table = useReactTable({
@@ -37,6 +45,9 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
     state: {
       columnFilters,
       sorting,
+    },
+    meta: {
+      onRowClick,
     },
   });
 
@@ -60,13 +71,32 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
 
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
-                  ))}
-                </TableRow>
-              ))
+              table.getRowModel().rows.map((row) => {
+                const task = row.original as { $id: string };
+
+                const handleRowClick = () => {
+                  table.options.meta?.onRowClick?.(task.$id);
+                };
+
+                return (
+                  <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'} onClick={handleRowClick} className={onRowClick ? 'cursor-pointer' : ''}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        onClick={(event: React.MouseEvent) => {
+                          if (cell.column.id === 'actions') {
+                            event.stopPropagation();
+                          } else {
+                            handleRowClick();
+                          }
+                        }}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                );
+              })
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">

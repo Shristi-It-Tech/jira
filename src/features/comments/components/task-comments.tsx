@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useCurrent } from '@/features/auth/api/use-current';
 import { useGetComments } from '@/features/comments/api/use-get-comments';
 import type { CommentWithAuthor } from '@/features/comments/types';
 import { useGetMembers } from '@/features/members/api/use-get-members';
@@ -40,10 +41,15 @@ const buildCommentTree = (comments: CommentWithAuthor[]): CommentNode[] => {
 export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
   const [replyTo, setReplyTo] = useState<CommentWithAuthor | null>(null);
 
+  const { data: currentUser } = useCurrent();
   const { data: commentsData, isLoading: isLoadingComments } = useGetComments({ taskId });
   const { data: membersData, isLoading: isLoadingMembers } = useGetMembers({ workspaceId });
 
   const members: Member[] = membersData?.documents ?? [];
+  const currentMember = useMemo(
+    () => members.find((member) => member.userId === currentUser?.$id),
+    [members, currentUser],
+  );
 
   const commentTree = useMemo(() => {
     if (!commentsData?.documents) return [];
@@ -69,7 +75,7 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
         ) : (
           <div className="space-y-4">
             {commentTree.map((comment) => (
-              <CommentThread key={comment.$id} comment={comment} onReply={setReplyTo} />
+              <CommentThread key={comment.$id} comment={comment} onReply={setReplyTo} currentMember={currentMember} />
             ))}
           </div>
         )}
@@ -81,17 +87,18 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
 interface CommentThreadProps {
   comment: CommentNode;
   onReply: (comment: CommentWithAuthor) => void;
+  currentMember?: Member;
 }
 
-const CommentThread = ({ comment, onReply }: CommentThreadProps) => {
+const CommentThread = ({ comment, onReply, currentMember }: CommentThreadProps) => {
   return (
     <div className="space-y-4">
-      <CommentItem comment={comment} onReply={onReply} />
+      <CommentItem comment={comment} onReply={onReply} currentMember={currentMember} />
 
       {comment.replies.length > 0 && (
         <div className="ml-6 border-l pl-4">
           {comment.replies.map((reply) => (
-            <CommentThread key={reply.$id} comment={reply} onReply={onReply} />
+            <CommentThread key={reply.$id} comment={reply} onReply={onReply} currentMember={currentMember} />
           ))}
         </div>
       )}

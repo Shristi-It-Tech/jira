@@ -1,14 +1,17 @@
 'use client';
 
+import type { SortingState } from '@tanstack/react-table';
 import { Loader2, PlusIcon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useQueryState } from 'nuqs';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 
 import { DottedSeparator } from '@/components/dotted-separator';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useBulkUpdateTasks } from '@/features/tasks/api/use-bulk-update-tasks';
 import { useGetTasks } from '@/features/tasks/api/use-get-tasks';
+import { LAST_TASK_ORIGIN_STORAGE_KEY, LAST_TASK_SOURCE_STORAGE_KEY, LAST_TASK_VIEW_STORAGE_KEY, serializeTaskOrigin } from '@/features/tasks/constants';
 import { useCreateTaskModal } from '@/features/tasks/hooks/use-create-task-modal';
 import { useTaskFilters } from '@/features/tasks/hooks/use-task-filters';
 import type { TaskStatus } from '@/features/tasks/types';
@@ -24,27 +27,64 @@ import { DataTable } from './data-table';
 interface TaskViewSwitcherProps {
   projectId?: string;
   hideProjectFilter?: boolean;
+  initialAssigneeId?: string | null;
+  defaultSorting?: SortingState;
+  taskSource?: 'all' | 'mine';
 }
 
-export const TaskViewSwitcher = ({ projectId, hideProjectFilter }: TaskViewSwitcherProps) => {
+export const TaskViewSwitcher = ({
+  projectId,
+  hideProjectFilter,
+  initialAssigneeId,
+  defaultSorting,
+  taskSource,
+}: TaskViewSwitcherProps) => {
   const [view, setView] = useQueryState('task-view', {
     defaultValue: 'table',
   });
-  const [{ status, assigneeId, projectId: filteredProjectId, dueDate, search }] = useTaskFilters();
+  const [filters, setFilters] = useTaskFilters();
+  const { status, assigneeId, projectId: filteredProjectId, search } = filters;
 
   const workspaceId = useWorkspaceId();
 
   const { open } = useCreateTaskModal();
+  const router = useRouter();
+  const effectiveAssigneeId = assigneeId ?? initialAssigneeId ?? undefined;
+
   const { data: tasks, isLoading: isLoadingTasks } = useGetTasks({
     workspaceId,
     status,
-    assigneeId,
+    assigneeId: effectiveAssigneeId,
     projectId: projectId ?? filteredProjectId,
-    dueDate,
     search,
   });
 
   const { mutate: bulkUpdateTasks } = useBulkUpdateTasks();
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (view) {
+      window.sessionStorage.setItem(LAST_TASK_VIEW_STORAGE_KEY, view);
+    }
+  }, [view]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const originValue = serializeTaskOrigin(projectId ? { type: 'project', projectId } : { type: 'workspace' });
+    window.sessionStorage.setItem(LAST_TASK_ORIGIN_STORAGE_KEY, originValue);
+  }, [projectId]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (taskSource) {
+      window.sessionStorage.setItem(LAST_TASK_SOURCE_STORAGE_KEY, taskSource);
+    }
+  }, [taskSource]);
+
+  useEffect(() => {
+    if (!initialAssigneeId || assigneeId) return;
+    setFilters({ assigneeId: initialAssigneeId });
+  }, [initialAssigneeId, assigneeId, setFilters]);
 
   const onKanbanChange = useCallback(
     (tasks: { $id: string; status: TaskStatus; position: number }[]) => {
@@ -53,6 +93,29 @@ export const TaskViewSwitcher = ({ projectId, hideProjectFilter }: TaskViewSwitc
       });
     },
     [bulkUpdateTasks],
+  );
+
+  const handleRowClick = useCallback(
+    (taskId: string) => {
+      const normalizedView = view ?? 'table';
+      const params = new URLSearchParams();
+      params.set('task-view', normalizedView);
+
+      if (projectId) {
+        params.set('task-origin', 'project');
+        params.set('origin-project-id', projectId);
+      } else {
+        params.set('task-origin', 'workspace');
+      }
+
+      if (taskSource) {
+        params.set('task-source', taskSource);
+      }
+
+      const query = params.toString();
+      router.push(`/workspaces/${workspaceId}/tasks/${taskId}${query ? `?${query}` : ''}`);
+    },
+    [router, workspaceId, view, projectId, taskSource],
   );
 
   return (
@@ -81,7 +144,7 @@ export const TaskViewSwitcher = ({ projectId, hideProjectFilter }: TaskViewSwitc
         <DottedSeparator className="my-4" />
 
         <div className="flex flex-col justify-between gap-2 xl:flex-row xl:items-center">
-          <DataFilters hideProjectFilter={hideProjectFilter} />
+          <DataFilters hideProjectFilter={hideProjectFilter} hideAssigneeFilter={taskSource === 'mine'} />
 
           <DataSearch />
         </div>
@@ -94,7 +157,12 @@ export const TaskViewSwitcher = ({ projectId, hideProjectFilter }: TaskViewSwitc
         ) : (
           <>
             <TabsContent value="table" className="mt-0">
-              <DataTable columns={columns} data={tasks?.documents ?? []} />
+              <DataTable
+                columns={columns}
+                data={tasks?.documents ?? []}
+                onRowClick={handleRowClick}
+                initialSorting={defaultSorting}
+              />
             </TabsContent>
 
             <TabsContent value="kanban" className="mt-0">

@@ -8,6 +8,5 @@ export const useTaskFilters = () => {
     status: parseAsStringEnum(Object.values(TaskStatus)),
     assigneeId: parseAsString,
     search: parseAsString,
-    dueDate: parseAsString,
   });
 };

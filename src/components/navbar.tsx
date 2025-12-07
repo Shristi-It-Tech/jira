@@ -7,28 +7,30 @@ import { UserButton } from '@/features/auth/components/user-button';
 import { MobileSidebar } from './mobile-sidebar';
 import { SourceCode } from './source-code';
 
-const pathnameMap = {
-  tasks: {
-    title: 'My Tasks',
-    description: 'View all of your tasks here.',
-  },
-  projects: {
-    title: 'My Project',
-    description: 'View tasks of your project here.',
-  },
-};
-
-const defaultMap = {
-  title: 'Home',
-  description: 'Monitor all of your projects and tasks here.',
-};
-
 export const Navbar = () => {
   const pathname = usePathname();
   const pathnameParts = pathname.split('/');
-  const pathnameKey = pathnameParts[3] as keyof typeof pathnameMap;
+  const section = pathnameParts[3];
+  const subsection = pathnameParts[4];
 
-  const { title, description } = pathnameMap[pathnameKey] || defaultMap;
+  let title = 'Home';
+  let description = 'Monitor all of your projects and tasks here.';
+
+  if (section === 'tasks') {
+    if (subsection === 'all') {
+      title = 'All Tasks';
+      description = 'Review every task in this workspace.';
+    } else if (!subsection || subsection === '') {
+      title = 'My Tasks';
+      description = 'Tasks assigned to you in this workspace.';
+    } else {
+      title = 'Task Details';
+      description = 'Inspect and manage this task.';
+    }
+  } else if (section === 'projects') {
+    title = 'Projects';
+    description = 'View tasks for your project here.';
+  }
 
   return (
     <nav className="flex items-center justify-between px-6 pt-4">

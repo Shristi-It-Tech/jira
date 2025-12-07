@@ -4,6 +4,7 @@ import type { PropsWithChildren } from 'react';
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useDeleteTask } from '@/features/tasks/api/use-delete-task';
+import { LAST_TASK_ORIGIN_STORAGE_KEY, LAST_TASK_SOURCE_STORAGE_KEY, LAST_TASK_VIEW_STORAGE_KEY, parseTaskOrigin } from '@/features/tasks/constants';
 import { useEditTaskModal } from '@/features/tasks/hooks/use-edit-task-modal';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { useConfirm } from '@/hooks/use-confirm';
@@ -22,6 +23,31 @@ export const TaskActions = ({ id, projectId, children }: PropsWithChildren<TaskA
 
   const { mutate: deleteTask, isPending } = useDeleteTask();
 
+  const buildTaskDetailsUrl = () => {
+    if (typeof window === 'undefined') return `/workspaces/${workspaceId}/tasks/${id}`;
+
+    const taskView = window.sessionStorage.getItem(LAST_TASK_VIEW_STORAGE_KEY);
+    const taskOrigin = parseTaskOrigin(window.sessionStorage.getItem(LAST_TASK_ORIGIN_STORAGE_KEY));
+    const taskSource = window.sessionStorage.getItem(LAST_TASK_SOURCE_STORAGE_KEY);
+
+    const params = new URLSearchParams();
+    if (taskView) params.set('task-view', taskView);
+
+    if (taskOrigin?.type === 'project' && taskOrigin.projectId) {
+      params.set('task-origin', 'project');
+      params.set('origin-project-id', taskOrigin.projectId);
+    } else if (taskOrigin?.type === 'workspace') {
+      params.set('task-origin', 'workspace');
+    }
+
+    if (taskSource) {
+      params.set('task-source', taskSource);
+    }
+
+    const query = params.toString();
+    return `/workspaces/${workspaceId}/tasks/${id}${query ? `?${query}` : ''}`;
+  };
+
   const onDelete = async () => {
     const ok = await confirm();
     if (!ok) return;
@@ -30,7 +56,7 @@ export const TaskActions = ({ id, projectId, children }: PropsWithChildren<TaskA
   };
 
   const onOpenTask = () => {
-    router.push(`/workspaces/${workspaceId}/tasks/${id}`);
+    router.push(buildTaskDetailsUrl());
   };
 
   const onOpenProject = () => {
@@ -42,7 +68,7 @@ export const TaskActions = ({ id, projectId, children }: PropsWithChildren<TaskA
       <ConfirmDialog />
 
       <DropdownMenu modal={false}>
-        <DropdownMenuTrigger asChild disabled={isPending}>
+        <DropdownMenuTrigger asChild disabled={isPending} data-prevent-row-click>
           {children}
         </DropdownMenuTrigger>
 
