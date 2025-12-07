@@ -16,3 +16,7 @@ export const createTaskSchema = z.object({
     required_error: 'Task type is required.',
   }),
 });
+
+export const createTaskAttachmentSchema = z.object({
+  file: z.instanceof(File, { message: 'Attachment file is required.' }).refine((file) => file.size > 0, 'Attachment file is required.'),
+});

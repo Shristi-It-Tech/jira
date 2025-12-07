@@ -5,6 +5,7 @@ import { PageError } from '@/components/page-error';
 import { PageLoader } from '@/components/page-loader';
 import { TaskComments } from '@/features/comments/components/task-comments';
 import { useGetTask } from '@/features/tasks/api/use-get-task';
+import { TaskAttachments } from '@/features/tasks/components/task-attachments';
 import { TaskBreadcrumbs } from '@/features/tasks/components/task-breadcrumbs';
 import { TaskDescription } from '@/features/tasks/components/task-description';
 import { TaskOverview } from '@/features/tasks/components/task-overview';
@@ -27,7 +28,10 @@ export const TaskIdClient = () => {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <TaskOverview task={task} />
-        <TaskDescription task={task} />
+        <div className="flex flex-col gap-4">
+          <TaskDescription task={task} />
+          <TaskAttachments taskId={task.$id} />
+        </div>
       </div>
 
       <div className="mt-6">

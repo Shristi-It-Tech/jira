@@ -3,6 +3,7 @@ export { CommentModel } from './models/comment';
 export { EmployeeModel } from './models/employee';
 export { MemberModel } from './models/member';
 export { ProjectModel } from './models/project';
+export { TaskAttachmentModel } from './models/task-attachment';
 export { TaskModel } from './models/task';
 export { UserModel } from './models/user';
 export { WorkspaceModel } from './models/workspace';

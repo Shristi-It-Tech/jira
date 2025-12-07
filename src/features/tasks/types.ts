@@ -40,3 +40,17 @@ export type TaskWithRelations = Task & {
   project: Project;
   assignee: Member;
 };
+
+export type TaskAttachment = WithDocument<{
+  taskId: string;
+  workspaceId: string;
+  memberId: string;
+  fileId: string;
+  name: string;
+  size: number;
+  mimeType: string;
+}>;
+
+export type TaskAttachmentWithAuthor = TaskAttachment & {
+  uploader?: Member;
+};

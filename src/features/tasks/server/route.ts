@@ -1,17 +1,18 @@
 // @ts-nocheck
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 
-import { IMAGES_BUCKET } from '@/config/storage';
+import { ATTACHMENTS_BUCKET, IMAGES_BUCKET } from '@/config/storage';
 import { createCommentSchema } from '@/features/comments/schema';
 import type { CommentDocument, CommentWithAuthor } from '@/features/comments/types';
 import { type Member, type MemberDocument, MemberRole } from '@/features/members/types';
 import { getMember } from '@/features/members/utils';
 import type { Project } from '@/features/projects/types';
-import { createTaskSchema } from '@/features/tasks/schema';
+import { createTaskAttachmentSchema, createTaskSchema } from '@/features/tasks/schema';
 import { type Task, TaskStatus, TaskType } from '@/features/tasks/types';
-import { CommentModel, MemberModel, ProjectModel, TaskModel, UserModel, connectToDatabase } from '@/lib/db';
+import { CommentModel, MemberModel, ProjectModel, TaskAttachmentModel, TaskModel, UserModel, connectToDatabase } from '@/lib/db';
 import { toDocumentList } from '@/lib/db/format';
 import { sessionMiddleware } from '@/lib/session-middleware';
 import { storage } from '@/lib/storage';
@@ -301,6 +302,128 @@ const app = new Hono()
         },
       },
     });
+  })
+  .get('/:taskId/attachments', sessionMiddleware, async (ctx) => {
+    const user = ctx.get('user');
+    const { taskId } = ctx.req.param();
+
+    const taskDoc = await TaskModel.findById(taskId).exec();
+
+    if (!taskDoc) {
+      return ctx.json({ error: 'Task not found.' }, 404);
+    }
+
+    const member = await getMember({ workspaceId: taskDoc.workspaceId, userId: user.$id });
+
+    if (!member) {
+      return ctx.json({ error: 'Unauthorized.' }, 401);
+    }
+
+    const attachmentDocs = await TaskAttachmentModel.find({ taskId }).sort({ createdAt: -1 }).exec();
+    const uploaderIds = Array.from(new Set(attachmentDocs.map((doc) => doc.memberId)));
+    const memberMap = await buildMemberMap(uploaderIds);
+
+    const attachments = attachmentDocs.map((doc) => {
+      const attachment = doc.toObject();
+      const uploader = memberMap.get(attachment.memberId);
+
+      return {
+        ...attachment,
+        uploader,
+      };
+    });
+
+    return ctx.json({ data: toDocumentList(attachments) });
+  })
+  .post('/:taskId/attachments', sessionMiddleware, zValidator('form', createTaskAttachmentSchema), async (ctx) => {
+    const user = ctx.get('user');
+    const { taskId } = ctx.req.param();
+    const { file } = ctx.req.valid('form');
+
+    const taskDoc = await TaskModel.findById(taskId).exec();
+
+    if (!taskDoc) {
+      return ctx.json({ error: 'Task not found.' }, 404);
+    }
+
+    const member = await getMember({ workspaceId: taskDoc.workspaceId, userId: user.$id });
+
+    if (!member) {
+      return ctx.json({ error: 'Unauthorized.' }, 401);
+    }
+
+    const fileId = randomUUID();
+    await storage.createFile(ATTACHMENTS_BUCKET, fileId, file);
+
+    const attachmentDoc = await TaskAttachmentModel.create({
+      taskId,
+      workspaceId: taskDoc.workspaceId,
+      memberId: member.$id,
+      fileId,
+      name: file.name,
+      size: file.size,
+      mimeType: file.type || 'application/octet-stream',
+    });
+
+    const memberMap = await buildMemberMap([member.$id]);
+
+    return ctx.json({
+      data: {
+        ...attachmentDoc.toObject(),
+        uploader: memberMap.get(member.$id),
+      },
+    });
+  })
+  .get('/:taskId/attachments/:attachmentId/download', sessionMiddleware, async (ctx) => {
+    const user = ctx.get('user');
+    const { taskId, attachmentId } = ctx.req.param();
+
+    const attachmentDoc = await TaskAttachmentModel.findById(attachmentId).exec();
+
+    if (!attachmentDoc || attachmentDoc.taskId !== taskId) {
+      return ctx.json({ error: 'Attachment not found.' }, 404);
+    }
+
+    const member = await getMember({ workspaceId: attachmentDoc.workspaceId, userId: user.$id });
+
+    if (!member) {
+      return ctx.json({ error: 'Unauthorized.' }, 401);
+    }
+
+    const fileBuffer = await storage.getFileView(ATTACHMENTS_BUCKET, attachmentDoc.fileId);
+
+    return new Response(fileBuffer, {
+      headers: {
+        'Content-Type': attachmentDoc.mimeType,
+        'Content-Length': attachmentDoc.size.toString(),
+        'Content-Disposition': `attachment; filename="${encodeURIComponent(attachmentDoc.name)}"`,
+      },
+    });
+  })
+  .delete('/:taskId/attachments/:attachmentId', sessionMiddleware, async (ctx) => {
+    const user = ctx.get('user');
+    const { taskId, attachmentId } = ctx.req.param();
+
+    const attachmentDoc = await TaskAttachmentModel.findById(attachmentId).exec();
+
+    if (!attachmentDoc || attachmentDoc.taskId !== taskId) {
+      return ctx.json({ error: 'Attachment not found.' }, 404);
+    }
+
+    const member = await getMember({ workspaceId: attachmentDoc.workspaceId, userId: user.$id });
+
+    if (!member) {
+      return ctx.json({ error: 'Unauthorized.' }, 401);
+    }
+
+    if (member.role !== MemberRole.ADMIN && attachmentDoc.memberId !== member.$id) {
+      return ctx.json({ error: 'Forbidden.' }, 403);
+    }
+
+    await storage.deleteFile(ATTACHMENTS_BUCKET, attachmentDoc.fileId);
+    await attachmentDoc.deleteOne();
+
+    return ctx.json({ data: { deleted: true } });
   })
   .delete('/:taskId/comments/:commentId', sessionMiddleware, async (ctx) => {
     const user = ctx.get('user');
