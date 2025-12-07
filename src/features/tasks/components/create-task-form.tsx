@@ -16,7 +16,7 @@ import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
 import { useCreateTask } from '@/features/tasks/api/use-create-task';
 import { createTaskSchema } from '@/features/tasks/schema';
-import { TaskStatus } from '@/features/tasks/types';
+import { TASK_TYPE_LABELS, TaskStatus, TaskType } from '@/features/tasks/types';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { cn } from '@/lib/utils';
 
@@ -42,6 +42,7 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
       description: '',
       projectId: undefined,
       status: initialStatus ?? undefined,
+      type: TaskType.TASK,
       workspaceId,
     },
   });
@@ -87,6 +88,33 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
                     </FormControl>
 
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                disabled={isPending}
+                control={createTaskForm.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Type</FormLabel>
+
+                    <Select disabled={isPending} defaultValue={field.value} value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>{field.value ? <SelectValue placeholder="Select type" /> : 'Select type'}</SelectTrigger>
+                      </FormControl>
+
+                      <FormMessage />
+
+                      <SelectContent>
+                        {Object.values(TaskType).map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {TASK_TYPE_LABELS[type]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </FormItem>
                 )}
               />

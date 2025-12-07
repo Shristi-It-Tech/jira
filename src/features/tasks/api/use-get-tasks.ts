@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import type { TaskStatus, TaskWithRelations } from '@/features/tasks/types';
+import type { TaskStatus, TaskType, TaskWithRelations } from '@/features/tasks/types';
 import { client } from '@/lib/hono';
 import type { DocumentList } from '@/types/database';
 
@@ -11,13 +11,14 @@ interface useGetTasksProps {
   search?: string | null;
   assigneeId?: string | null;
   dueDate?: string | null;
+  type?: TaskType | null;
 }
 
 type TasksResponse = DocumentList<TaskWithRelations>;
 
-export const useGetTasks = ({ workspaceId, projectId, status, search, assigneeId, dueDate }: useGetTasksProps) => {
+export const useGetTasks = ({ workspaceId, projectId, status, search, assigneeId, dueDate, type }: useGetTasksProps) => {
   const query = useQuery<TasksResponse>({
-    queryKey: ['tasks', workspaceId, projectId, status, search, assigneeId, dueDate],
+    queryKey: ['tasks', workspaceId, projectId, status, search, assigneeId, dueDate, type],
     queryFn: async () => {
       const response = await client.api.tasks.$get({
         query: {
@@ -27,6 +28,7 @@ export const useGetTasks = ({ workspaceId, projectId, status, search, assigneeId
           search: search ?? undefined,
           assigneeId: assigneeId ?? undefined,
           dueDate: dueDate ?? undefined,
+          type: type ?? undefined,
         },
       });
 

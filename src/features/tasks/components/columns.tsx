@@ -7,14 +7,18 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
-import type { TaskWithRelations } from '@/features/tasks/types';
+import { TASK_TYPE_LABELS, type TaskWithRelations } from '@/features/tasks/types';
 import { snakeCaseToTitleCase } from '@/lib/utils';
 
 import { TaskActions } from './task-actions';
 import { TaskDate } from './task-date';
 
-export const columns: ColumnDef<TaskWithRelations>[] = [
-  {
+interface GetColumnsOptions {
+  includeProjectColumn?: boolean;
+}
+
+export const getColumns = ({ includeProjectColumn = true }: GetColumnsOptions = {}): ColumnDef<TaskWithRelations>[] => {
+  const nameColumn: ColumnDef<TaskWithRelations> = {
     accessorKey: 'name',
     header: ({ column }) => {
       return (
@@ -29,8 +33,9 @@ export const columns: ColumnDef<TaskWithRelations>[] = [
 
       return <p className="line-clamp-1">{name}</p>;
     },
-  },
-  {
+  };
+
+  const projectColumn: ColumnDef<TaskWithRelations> = {
     accessorKey: 'project',
     header: ({ column }) => {
       return (
@@ -51,8 +56,9 @@ export const columns: ColumnDef<TaskWithRelations>[] = [
         </div>
       );
     },
-  },
-  {
+  };
+
+  const assigneeColumn: ColumnDef<TaskWithRelations> = {
     accessorKey: 'assignee',
     header: ({ column }) => {
       return (
@@ -73,8 +79,26 @@ export const columns: ColumnDef<TaskWithRelations>[] = [
         </div>
       );
     },
-  },
-  {
+  };
+
+  const typeColumn: ColumnDef<TaskWithRelations> = {
+    accessorKey: 'type',
+    header: ({ column }) => {
+      return (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
+          Type
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const type = row.original.type;
+
+      return <p className="text-sm font-medium">{TASK_TYPE_LABELS[type]}</p>;
+    },
+  };
+
+  const dueDateColumn: ColumnDef<TaskWithRelations> = {
     accessorKey: 'dueDate',
     header: ({ column }) => {
       return (
@@ -89,8 +113,9 @@ export const columns: ColumnDef<TaskWithRelations>[] = [
 
       return <TaskDate value={dueDate} />;
     },
-  },
-  {
+  };
+
+  const statusColumn: ColumnDef<TaskWithRelations> = {
     accessorKey: 'status',
     header: ({ column }) => {
       return (
@@ -105,8 +130,9 @@ export const columns: ColumnDef<TaskWithRelations>[] = [
 
       return <Badge variant={status}>{snakeCaseToTitleCase(status)}</Badge>;
     },
-  },
-  {
+  };
+
+  const actionsColumn: ColumnDef<TaskWithRelations> = {
     id: 'actions',
     cell: ({ row }) => {
       const id = row.original.$id;
@@ -120,5 +146,17 @@ export const columns: ColumnDef<TaskWithRelations>[] = [
         </TaskActions>
       );
     },
-  },
-];
+  };
+
+  const columnList: ColumnDef<TaskWithRelations>[] = [
+    nameColumn,
+    ...(includeProjectColumn ? [projectColumn] : []),
+    assigneeColumn,
+    typeColumn,
+    dueDateColumn,
+    statusColumn,
+    actionsColumn,
+  ];
+
+  return columnList;
+};

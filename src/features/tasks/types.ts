@@ -10,9 +10,24 @@ export enum TaskStatus {
   DONE = 'DONE',
 }
 
+export enum TaskType {
+  EPIC = 'EPIC',
+  STORY = 'STORY',
+  BUG = 'BUG',
+  TASK = 'TASK',
+}
+
+export const TASK_TYPE_LABELS: Record<TaskType, string> = {
+  [TaskType.EPIC]: 'Epic',
+  [TaskType.STORY]: 'Story',
+  [TaskType.BUG]: 'Bug',
+  [TaskType.TASK]: 'Task',
+};
+
 export type Task = WithDocument<{
   name: string;
   status: TaskStatus;
+  type: TaskType;
   assigneeId: string;
   projectId: string;
   workspaceId: string;

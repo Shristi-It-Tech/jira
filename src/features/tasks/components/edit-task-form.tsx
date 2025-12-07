@@ -15,7 +15,7 @@ import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
 import { useUpdateTask } from '@/features/tasks/api/use-update-task';
 import { createTaskSchema } from '@/features/tasks/schema';
-import { type Task, TaskStatus } from '@/features/tasks/types';
+import { TASK_TYPE_LABELS, type Task, TaskStatus, TaskType } from '@/features/tasks/types';
 import { cn } from '@/lib/utils';
 
 interface EditTaskFormProps {
@@ -32,6 +32,7 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
     resolver: zodResolver(createTaskSchema.omit({ workspaceId: true, description: true })),
     defaultValues: {
       ...initialValues,
+      type: initialValues.type ?? TaskType.TASK,
       dueDate: initialValues.dueDate ? new Date(initialValues.dueDate) : undefined,
     },
   });
@@ -77,6 +78,33 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
                     </FormControl>
 
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                disabled={isPending}
+                control={editTaskForm.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Type</FormLabel>
+
+                    <Select disabled={isPending} defaultValue={field.value} value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>{field.value ? <SelectValue placeholder="Select type" /> : 'Select type'}</SelectTrigger>
+                      </FormControl>
+
+                      <FormMessage />
+
+                      <SelectContent>
+                        {Object.values(TaskType).map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {TASK_TYPE_LABELS[type]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </FormItem>
                 )}
               />

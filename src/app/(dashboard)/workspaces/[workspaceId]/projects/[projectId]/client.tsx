@@ -46,7 +46,7 @@ export const ProjectIdClient = () => {
 
       {projectAnalytics && <Analytics data={projectAnalytics} />}
 
-      <TaskViewSwitcher projectId={projectId} hideProjectFilter />
+      <TaskViewSwitcher projectId={projectId} hideProjectFilter defaultSorting={[{ id: 'dueDate', desc: true }]} />
     </div>
   );
 };

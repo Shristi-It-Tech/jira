@@ -10,7 +10,7 @@ import { type Member, type MemberDocument, MemberRole } from '@/features/members
 import { getMember } from '@/features/members/utils';
 import type { Project } from '@/features/projects/types';
 import { createTaskSchema } from '@/features/tasks/schema';
-import { type Task, TaskStatus } from '@/features/tasks/types';
+import { type Task, TaskStatus, TaskType } from '@/features/tasks/types';
 import { CommentModel, MemberModel, ProjectModel, TaskModel, UserModel, connectToDatabase } from '@/lib/db';
 import { toDocumentList } from '@/lib/db/format';
 import { sessionMiddleware } from '@/lib/session-middleware';
@@ -83,11 +83,12 @@ const app = new Hono()
         status: z.nativeEnum(TaskStatus).optional(),
         search: z.string().optional(),
         dueDate: z.string().optional(),
+        type: z.nativeEnum(TaskType).optional(),
       }),
     ),
     async (ctx) => {
       const user = ctx.get('user');
-      const { workspaceId, projectId, assigneeId, status, search, dueDate } = ctx.req.valid('query');
+      const { workspaceId, projectId, assigneeId, status, search, dueDate, type } = ctx.req.valid('query');
 
       const member = await getMember({ workspaceId, userId: user.$id });
 
@@ -103,6 +104,7 @@ const app = new Hono()
       if (status) filters.status = status;
       if (assigneeId) filters.assigneeId = assigneeId;
       if (dueDate) filters.dueDate = dueDate;
+      if (type) filters.type = type;
       if (search) filters.name = { $regex: search, $options: 'i' };
 
       const taskDocs = await TaskModel.find(filters).sort({ createdAt: -1 }).exec();
@@ -173,7 +175,7 @@ const app = new Hono()
   })
   .post('/', sessionMiddleware, zValidator('json', createTaskSchema), async (ctx) => {
     const user = ctx.get('user');
-    const { name, status, workspaceId, projectId, dueDate, assigneeId } = ctx.req.valid('json');
+    const { name, status, workspaceId, projectId, dueDate, assigneeId, type } = ctx.req.valid('json');
 
     const member = await getMember({ workspaceId, userId: user.$id });
 
@@ -190,6 +192,7 @@ const app = new Hono()
       workspaceId,
       projectId,
       dueDate: dueDate.toISOString(),
+      type,
       assigneeId,
       position,
     });
@@ -217,6 +220,7 @@ const app = new Hono()
     if (payload.status) taskDoc.status = payload.status;
     if (payload.projectId) taskDoc.projectId = payload.projectId;
     if (payload.assigneeId) taskDoc.assigneeId = payload.assigneeId;
+    if (payload.type) taskDoc.type = payload.type;
     if (payload.description !== undefined) taskDoc.description = payload.description;
     if (payload.dueDate) taskDoc.dueDate = payload.dueDate.toISOString();
 

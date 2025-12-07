@@ -4,7 +4,7 @@ import type { SortingState } from '@tanstack/react-table';
 import { Loader2, PlusIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useQueryState } from 'nuqs';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 import { DottedSeparator } from '@/components/dotted-separator';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,7 @@ import { useTaskFilters } from '@/features/tasks/hooks/use-task-filters';
 import type { TaskStatus } from '@/features/tasks/types';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 
-import { columns } from './columns';
+import { getColumns } from './columns';
 import { DataCalendar } from './data-calendar';
 import { DataFilters } from './data-filters';
 import { DataKanban } from './data-kanban';
@@ -48,13 +48,14 @@ export const TaskViewSwitcher = ({
     defaultValue: 'table',
   });
   const [filters, setFilters] = useTaskFilters();
-  const { status, assigneeId, projectId: filteredProjectId, search } = filters;
+  const { status, assigneeId, projectId: filteredProjectId, search, type } = filters;
 
   const workspaceId = useWorkspaceId();
 
   const { open } = useCreateTaskModal();
   const router = useRouter();
   const effectiveAssigneeId = assigneeId ?? initialAssigneeId ?? undefined;
+  const tableColumns = useMemo(() => getColumns({ includeProjectColumn: !projectId }), [projectId]);
 
   const { data: tasks, isLoading: isLoadingTasks } = useGetTasks({
     workspaceId,
@@ -62,6 +63,7 @@ export const TaskViewSwitcher = ({
     assigneeId: effectiveAssigneeId,
     projectId: projectId ?? filteredProjectId,
     search,
+    type,
   });
 
   const { mutate: bulkUpdateTasks } = useBulkUpdateTasks();
@@ -162,7 +164,7 @@ export const TaskViewSwitcher = ({
         ) : (
           <>
             <TabsContent value="table" className="mt-0">
-              <DataTable columns={columns} data={tasks?.documents ?? []} onRowClick={handleRowClick} initialSorting={defaultSorting} />
+              <DataTable columns={tableColumns} data={tasks?.documents ?? []} onRowClick={handleRowClick} initialSorting={defaultSorting} />
             </TabsContent>
 
             <TabsContent value="kanban" className="mt-0">

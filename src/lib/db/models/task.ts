@@ -1,12 +1,13 @@
 import { Schema, model, models } from 'mongoose';
 
-import { TaskStatus } from '@/features/tasks/types';
+import { TaskStatus, TaskType } from '@/features/tasks/types';
 import { attachTransform, baseSchemaOptions } from '@/lib/db/utils';
 import type { WithDocument } from '@/types/database';
 
 export type TaskDocument = WithDocument<{
   name: string;
   status: TaskStatus;
+  type: TaskType;
   assigneeId: string;
   projectId: string;
   workspaceId: string;
@@ -20,6 +21,7 @@ const TaskSchema = attachTransform(
     {
       name: { type: String, required: true },
       status: { type: String, enum: Object.values(TaskStatus), default: TaskStatus.BACKLOG },
+      type: { type: String, enum: Object.values(TaskType), default: TaskType.TASK },
       assigneeId: { type: String, required: true },
       projectId: { type: String, required: true },
       workspaceId: { type: String, required: true },

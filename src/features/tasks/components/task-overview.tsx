@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 import { Pencil } from 'lucide-react';
 
 import { DottedSeparator } from '@/components/dotted-separator';
@@ -5,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { useEditTaskModal } from '@/features/tasks/hooks/use-edit-task-modal';
-import type { TaskWithRelations } from '@/features/tasks/types';
+import { TASK_TYPE_LABELS, TaskType, type TaskWithRelations } from '@/features/tasks/types';
 import { snakeCaseToTitleCase } from '@/lib/utils';
 
 import { OverviewProperty } from './overview-property';
@@ -37,6 +38,14 @@ export const TaskOverview = ({ task }: TaskOverviewProps) => {
             <MemberAvatar name={task.assignee.name} className="size-6" />
 
             <p className="text-sm font-medium">{task.assignee.name}</p>
+          </OverviewProperty>
+
+          <OverviewProperty label="Type">
+            <p className="text-sm font-medium">{TASK_TYPE_LABELS[task.type ?? TaskType.TASK]}</p>
+          </OverviewProperty>
+
+          <OverviewProperty label="Created">
+            <p className="text-sm font-medium text-muted-foreground">{format(new Date(task.$createdAt), 'PPP')}</p>
           </OverviewProperty>
 
           <OverviewProperty label="Due Date">
