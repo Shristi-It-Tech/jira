@@ -138,9 +138,9 @@ const app = new Hono()
 
     const member = await getMember({ workspaceId: projectDoc.workspaceId, userId: user.$id });
 
-  if (!member || member.role !== MemberRole.ADMIN) {
-    return ctx.json({ error: 'Unauthorized.' }, 401);
-  }
+    if (!member || member.role !== MemberRole.ADMIN) {
+      return ctx.json({ error: 'Unauthorized.' }, 401);
+    }
 
     const normalizedImage = typeof image === 'string' && image.length === 0 ? undefined : image;
     const imageId = await persistImage(normalizedImage, projectDoc.imageId);
@@ -166,7 +166,7 @@ const app = new Hono()
 
     const member = await getMember({ workspaceId: projectDoc.workspaceId, userId: user.$id });
 
-    if (!member) {
+    if (!member || member.role !== MemberRole.ADMIN) {
       return ctx.json({ error: 'Unauthorized.' }, 401);
     }
 
