@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 
 export const siteConfig: Metadata = {
-  title: 'Jira Clone',
-  description: 'Full-stack Jira Clone using Next.js 14 with MongoDB + JWT auth.',
+  title: 'SHRISTI IT',
+  description: ' SHRISTI IT platform',
   keywords: [
     'reactjs',
     'nextjs',
