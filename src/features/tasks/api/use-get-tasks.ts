@@ -13,13 +13,24 @@ interface useGetTasksProps {
   dueDate?: string | null;
   type?: TaskType | null;
   sprintId?: string | null;
+  createdById?: string | null;
 }
 
 type TasksResponse = DocumentList<TaskWithRelations>;
 
-export const useGetTasks = ({ workspaceId, projectId, status, search, assigneeId, dueDate, type, sprintId }: useGetTasksProps) => {
+export const useGetTasks = ({
+  workspaceId,
+  projectId,
+  status,
+  search,
+  assigneeId,
+  dueDate,
+  type,
+  sprintId,
+  createdById,
+}: useGetTasksProps) => {
   const query = useQuery<TasksResponse>({
-    queryKey: ['tasks', workspaceId, projectId, status, search, assigneeId, dueDate, type, sprintId],
+    queryKey: ['tasks', workspaceId, projectId, status, search, assigneeId, dueDate, type, sprintId, createdById],
     queryFn: async () => {
       const response = await client.api.tasks.$get({
         query: {
@@ -31,6 +42,7 @@ export const useGetTasks = ({ workspaceId, projectId, status, search, assigneeId
           dueDate: dueDate ?? undefined,
           type: type ?? undefined,
           sprintId: sprintId ?? undefined,
+          createdById: createdById ?? undefined,
         },
       });
 

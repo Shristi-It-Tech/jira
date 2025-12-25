@@ -56,7 +56,7 @@ export const TaskViewSwitcher = ({
     defaultValue: 'table',
   });
   const [filters, setFilters] = useTaskFilters();
-  const { status, assigneeId, projectId: filteredProjectId, search, type } = filters;
+  const { status, assigneeId, projectId: filteredProjectId, search, type, createdById } = filters;
 
   const workspaceId = useWorkspaceId();
 
@@ -77,6 +77,7 @@ export const TaskViewSwitcher = ({
     search,
     type,
     sprintId: lockedSprintId ?? undefined,
+    createdById,
   });
 
   const { mutate: bulkUpdateTasks } = useBulkUpdateTasks();
@@ -110,6 +111,7 @@ export const TaskViewSwitcher = ({
       status: lockedStatus ?? null,
       type: null,
       search: null,
+      createdById: null,
     });
   }, [resetFiltersOnMount, setFilters, projectId, initialAssigneeId, lockedStatus]);
 
@@ -127,6 +129,7 @@ export const TaskViewSwitcher = ({
       status: lockedStatus ?? null,
       type: null,
       search: null,
+      createdById: null,
     });
   }, [resetFiltersOnMount, setFilters, projectId, initialAssigneeId, lockedStatus]);
 

@@ -81,6 +81,33 @@ export const getColumns = ({ includeProjectColumn = true }: GetColumnsOptions = 
     },
   };
 
+  const createdByColumn: ColumnDef<TaskWithRelations> = {
+    accessorKey: 'createdBy',
+    header: ({ column }) => {
+      return (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
+          Created By
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const createdBy = row.original.createdBy;
+
+      if (!createdBy) {
+        return <p className="text-sm text-muted-foreground">Unknown</p>;
+      }
+
+      return (
+        <div className="flex items-center gap-x-2 text-sm font-medium">
+          <MemberAvatar fallbackClassName="text-xs" className="size-6" name={createdBy.name} />
+
+          <p className="line-clamp-1">{createdBy.name}</p>
+        </div>
+      );
+    },
+  };
+
   const typeColumn: ColumnDef<TaskWithRelations> = {
     accessorKey: 'type',
     header: ({ column }) => {
@@ -152,6 +179,7 @@ export const getColumns = ({ includeProjectColumn = true }: GetColumnsOptions = 
     nameColumn,
     ...(includeProjectColumn ? [projectColumn] : []),
     assigneeColumn,
+    createdByColumn,
     typeColumn,
     dueDateColumn,
     statusColumn,

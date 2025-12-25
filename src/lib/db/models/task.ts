@@ -10,6 +10,7 @@ export type TaskDocument = WithDocument<{
   status: TaskStatus;
   type: TaskType;
   assigneeId: string;
+  createdById: string;
   projectId: string;
   workspaceId: string;
   position: number;
@@ -25,6 +26,13 @@ const TaskSchema = attachTransform(
       status: { type: String, enum: Object.values(TaskStatus), default: TaskStatus.BACKLOG },
       type: { type: String, enum: Object.values(TaskType), default: TaskType.TASK },
       assigneeId: { type: String, required: true },
+      createdById: {
+        type: String,
+        required: true,
+        default: function (this: { assigneeId: string }) {
+          return this.assigneeId;
+        },
+      },
       projectId: { type: String, required: true },
       workspaceId: { type: String, required: true },
       position: { type: Number, required: true },

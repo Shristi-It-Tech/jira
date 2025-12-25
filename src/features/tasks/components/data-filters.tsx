@@ -1,4 +1,4 @@
-import { Folder, ListChecks, Tag, UserIcon } from 'lucide-react';
+import { Folder, ListChecks, Tag, UserIcon, UserPlus2 } from 'lucide-react';
 
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useGetMembers } from '@/features/members/api/use-get-members';
@@ -11,9 +11,10 @@ interface DataFiltersProps {
   hideProjectFilter?: boolean;
   hideAssigneeFilter?: boolean;
   hideStatusFilter?: boolean;
+  hideCreatedByFilter?: boolean;
 }
 
-export const DataFilters = ({ hideProjectFilter, hideAssigneeFilter, hideStatusFilter }: DataFiltersProps) => {
+export const DataFilters = ({ hideProjectFilter, hideAssigneeFilter, hideStatusFilter, hideCreatedByFilter }: DataFiltersProps) => {
   const workspaceId = useWorkspaceId();
 
   const { data: projects, isLoading: isLoadingProjects } = useGetProjects({ workspaceId });
@@ -31,7 +32,7 @@ export const DataFilters = ({ hideProjectFilter, hideAssigneeFilter, hideStatusF
     label: member.name,
   }));
 
-  const [{ status, assigneeId, projectId, type }, setFilters] = useTaskFilters();
+  const [{ status, assigneeId, projectId, type, createdById }, setFilters] = useTaskFilters();
 
   const onStatusChange = (value: string) => {
     setFilters({ status: value === 'all' ? null : (value as TaskStatus) });
@@ -39,6 +40,10 @@ export const DataFilters = ({ hideProjectFilter, hideAssigneeFilter, hideStatusF
 
   const onAssigneeChange = (value: string) => {
     setFilters({ assigneeId: value === 'all' ? null : (value as string) });
+  };
+
+  const onCreatedByChange = (value: string) => {
+    setFilters({ createdById: value === 'all' ? null : (value as string) });
   };
 
   const onTypeChange = (value: string) => {
@@ -86,6 +91,28 @@ export const DataFilters = ({ hideProjectFilter, hideAssigneeFilter, hideStatusF
 
           <SelectContent>
             <SelectItem value="all">All assignees</SelectItem>
+            <SelectSeparator />
+
+            {memberOptions?.map((member) => (
+              <SelectItem key={member.value} value={member.value}>
+                {member.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+
+      {!hideCreatedByFilter && (
+        <Select value={createdById ?? undefined} onValueChange={onCreatedByChange}>
+          <SelectTrigger className="h-8 w-full lg:w-auto">
+            <div className="flex items-center pr-2">
+              <UserPlus2 className="mr-2 size-4" />
+              <SelectValue placeholder="All creators" />
+            </div>
+          </SelectTrigger>
+
+          <SelectContent>
+            <SelectItem value="all">All creators</SelectItem>
             <SelectSeparator />
 
             {memberOptions?.map((member) => (

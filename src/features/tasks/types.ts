@@ -30,6 +30,7 @@ export type Task = WithDocument<{
   status: TaskStatus;
   type: TaskType;
   assigneeId: string;
+  createdById: string;
   projectId: string;
   workspaceId: string;
   position: number;
@@ -41,6 +42,7 @@ export type Task = WithDocument<{
 export type TaskWithRelations = Task & {
   project: Project;
   assignee: Member;
+  createdBy?: Member;
   sprint?: Sprint;
 };
 

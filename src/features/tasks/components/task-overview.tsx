@@ -41,6 +41,18 @@ export const TaskOverview = ({ task }: TaskOverviewProps) => {
             <p className="text-sm font-medium">{task.assignee.name}</p>
           </OverviewProperty>
 
+          <OverviewProperty label="Created By">
+            {task.createdBy ? (
+              <>
+                <MemberAvatar name={task.createdBy.name} className="size-6" />
+
+                <p className="text-sm font-medium">{task.createdBy.name}</p>
+              </>
+            ) : (
+              <p className="text-sm font-medium text-muted-foreground">Unknown</p>
+            )}
+          </OverviewProperty>
+
           <OverviewProperty label="Type">
             <p className="text-sm font-medium">{TASK_TYPE_LABELS[task.type ?? TaskType.TASK]}</p>
           </OverviewProperty>

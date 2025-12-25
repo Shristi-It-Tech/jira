@@ -109,11 +109,12 @@ const app = new Hono()
         dueDate: z.string().optional(),
         sprintId: z.string().optional(),
         type: z.nativeEnum(TaskType).optional(),
+        createdById: z.string().optional(),
       }),
     ),
     async (ctx) => {
       const user = ctx.get('user');
-      const { workspaceId, projectId, assigneeId, status, search, dueDate, sprintId, type } = ctx.req.valid('query');
+      const { workspaceId, projectId, assigneeId, status, search, dueDate, sprintId, type, createdById } = ctx.req.valid('query');
 
       const member = await getMember({ workspaceId, userId: user.$id });
 
@@ -131,19 +132,27 @@ const app = new Hono()
       if (dueDate) filters.dueDate = dueDate;
       if (sprintId) filters.sprintId = sprintId;
       if (type) filters.type = type;
+      if (createdById) filters.createdById = createdById;
       if (search) filters.name = { $regex: search, $options: 'i' };
 
       const taskDocs = await TaskModel.find(filters).sort({ createdAt: -1 }).exec();
 
       const projectIds = Array.from(new Set(taskDocs.map((doc) => doc.projectId)));
-      const assigneeIds = Array.from(new Set(taskDocs.map((doc) => doc.assigneeId)));
+      const memberIds = Array.from(
+        new Set(
+          taskDocs.flatMap((doc) => {
+            const createdById = doc.createdById ?? doc.assigneeId;
+            return [doc.assigneeId, createdById].filter((id): id is string => Boolean(id));
+          }),
+        ),
+      );
       const sprintIds = Array.from(
         new Set(taskDocs.map((doc) => doc.sprintId).filter((id): id is string => Boolean(id) && id !== BACKLOG_SPRINT_ID)),
       );
 
       const [projectMap, memberMap, sprintMap] = await Promise.all([
         buildProjectMap(projectIds),
-        buildMemberMap(assigneeIds),
+        buildMemberMap(memberIds),
         buildSprintMap(sprintIds),
       ]);
 
@@ -151,12 +160,14 @@ const app = new Hono()
         const task = doc.toObject<Task>();
         const project = projectMap.get(task.projectId);
         const assignee = memberMap.get(task.assigneeId);
+        const createdBy = memberMap.get(task.createdById ?? task.assigneeId);
         const sprint = task.sprintId !== BACKLOG_SPRINT_ID ? sprintMap.get(task.sprintId) : undefined;
 
         return {
           ...task,
           project,
           assignee,
+          createdBy,
           sprint,
         };
       });
@@ -183,23 +194,12 @@ const app = new Hono()
     }
 
     const projectDoc = await ProjectModel.findById(task.projectId).exec();
-    const memberDoc = await MemberModel.findById(task.assigneeId).exec();
+    const memberMap = await buildMemberMap([task.assigneeId, task.createdById].filter((id): id is string => Boolean(id)));
     const sprintDoc = task.sprintId !== BACKLOG_SPRINT_ID ? await SprintModel.findById(task.sprintId).exec() : null;
 
     const project = projectDoc ? { ...projectDoc.toObject<Project>(), imageUrl: await buildImageUrl(projectDoc.imageId) } : undefined;
-
-    let assignee: Member | undefined = undefined;
-
-    if (memberDoc) {
-      const memberData = memberDoc.toObject<MemberDocument>();
-      const userDoc = await UserModel.findById(memberData.userId).exec();
-
-      assignee = {
-        ...memberData,
-        name: userDoc?.name ?? '',
-        email: userDoc?.email ?? '',
-      };
-    }
+    const assignee = memberMap.get(task.assigneeId);
+    const createdBy = memberMap.get(task.createdById ?? task.assigneeId);
 
     const sprint = sprintDoc ? sprintDoc.toObject<Sprint>() : undefined;
 
@@ -208,6 +208,7 @@ const app = new Hono()
         ...task,
         project,
         assignee,
+        createdBy,
         sprint,
       },
     });
@@ -234,6 +235,7 @@ const app = new Hono()
       sprintId,
       type,
       assigneeId,
+      createdById: member.$id,
       position,
     });
 
@@ -264,6 +266,7 @@ const app = new Hono()
     if (payload.description !== undefined) taskDoc.description = payload.description;
     if (payload.sprintId !== undefined) taskDoc.sprintId = payload.sprintId;
     if (payload.dueDate) taskDoc.dueDate = payload.dueDate.toISOString();
+    if (!taskDoc.createdById) taskDoc.createdById = member.$id;
 
     await taskDoc.save();
 

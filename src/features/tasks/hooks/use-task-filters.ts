@@ -7,6 +7,7 @@ export const useTaskFilters = () => {
     projectId: parseAsString,
     status: parseAsStringEnum(Object.values(TaskStatus)),
     assigneeId: parseAsString,
+    createdById: parseAsString,
     type: parseAsStringEnum(Object.values(TaskType)),
     search: parseAsString,
   });
