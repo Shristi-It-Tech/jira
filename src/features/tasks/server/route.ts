@@ -215,7 +215,7 @@ const app = new Hono()
   })
   .post('/', sessionMiddleware, zValidator('json', createTaskSchema), async (ctx) => {
     const user = ctx.get('user');
-    const { name, status, workspaceId, projectId, dueDate, assigneeId, type, sprintId } = ctx.req.valid('json');
+    const { name, status, workspaceId, projectId, dueDate, assigneeId, type, sprintId, createdById } = ctx.req.valid('json');
 
     const member = await getMember({ workspaceId, userId: user.$id });
 
@@ -235,7 +235,7 @@ const app = new Hono()
       sprintId,
       type,
       assigneeId,
-      createdById: member.$id,
+      createdById: createdById ?? member.$id,
       position,
     });
 
@@ -264,6 +264,7 @@ const app = new Hono()
     if (payload.assigneeId) taskDoc.assigneeId = payload.assigneeId;
     if (payload.type) taskDoc.type = payload.type;
     if (payload.description !== undefined) taskDoc.description = payload.description;
+    if (payload.createdById) taskDoc.createdById = payload.createdById;
     if (payload.sprintId !== undefined) taskDoc.sprintId = payload.sprintId;
     if (payload.dueDate) taskDoc.dueDate = payload.dueDate.toISOString();
     if (!taskDoc.createdById) taskDoc.createdById = member.$id;

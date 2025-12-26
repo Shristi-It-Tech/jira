@@ -13,6 +13,7 @@ export const createTaskSchema = z.object({
   projectId: z.string().trim().min(1, 'Project id is required.'),
   dueDate: z.coerce.date(),
   assigneeId: z.string().trim().min(1, 'Assignee id is required.'),
+  createdById: z.string().trim().min(1, 'Created by is required.'),
   description: z.string().optional(),
   type: z.nativeEnum(TaskType, {
     required_error: 'Task type is required.',

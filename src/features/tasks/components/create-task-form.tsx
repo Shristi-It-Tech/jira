@@ -41,6 +41,7 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
       name: '',
       dueDate: undefined,
       assigneeId: undefined,
+      createdById: memberOptions[0]?.id,
       description: '',
       projectId: undefined,
       status: initialStatus ?? undefined,
@@ -150,6 +151,36 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
                     <Select disabled={isPending} defaultValue={field.value} value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>{field.value ? <SelectValue placeholder="Select assignee" /> : 'Select assignee'}</SelectTrigger>
+                      </FormControl>
+
+                      <FormMessage />
+
+                      <SelectContent>
+                        {memberOptions.map((member) => (
+                          <SelectItem key={member.id} value={member.id}>
+                            <div className="flex items-center gap-x-2">
+                              <MemberAvatar className="size-6" name={member.name} />
+                              {member.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                disabled={isPending}
+                control={createTaskForm.control}
+                name="createdById"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Created By</FormLabel>
+
+                    <Select disabled={isPending} defaultValue={field.value} value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>{field.value ? <SelectValue placeholder="Select creator" /> : 'Select creator'}</SelectTrigger>
                       </FormControl>
 
                       <FormMessage />
