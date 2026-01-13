@@ -66,7 +66,9 @@ export const TaskOverview = ({ task }: TaskOverviewProps) => {
           </OverviewProperty>
 
           <OverviewProperty label="Created">
-            <p className="text-sm font-medium text-muted-foreground">{format(new Date(task.$createdAt), 'PPP')}</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              {format(new Date(task.createdOn ?? task.$createdAt), 'PPP')}
+            </p>
           </OverviewProperty>
 
           <OverviewProperty label="Due Date">

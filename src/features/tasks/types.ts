@@ -35,6 +35,7 @@ export type Task = WithDocument<{
   workspaceId: string;
   position: number;
   dueDate: string;
+  createdOn: string;
   sprintId: string;
   description?: string;
 }>;

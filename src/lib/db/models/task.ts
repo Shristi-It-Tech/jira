@@ -15,6 +15,7 @@ export type TaskDocument = WithDocument<{
   workspaceId: string;
   position: number;
   dueDate: string;
+  createdOn: string;
   sprintId: string;
   description?: string;
 }>;
@@ -37,6 +38,7 @@ const TaskSchema = attachTransform(
       workspaceId: { type: String, required: true },
       position: { type: Number, required: true },
       dueDate: { type: String, required: true },
+      createdOn: { type: String, required: true },
       sprintId: { type: String, required: true, default: BACKLOG_SPRINT_ID },
       description: { type: String },
     },
